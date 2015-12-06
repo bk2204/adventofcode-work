@@ -1,0 +1,45 @@
+#!/usr/bin/ruby
+
+require 'set'
+
+module AdventOfCode
+  module D3
+    class Processor
+      attr_reader :locations
+
+      def initialize
+        @locations = Set.new
+        @curx = 0
+        @cury = 0
+        @locations << [@curx, @cury]
+      end
+
+      def process(line)
+        line.each_char do |c|
+          case c
+          when '>'
+            @curx += 1
+          when '<'
+            @curx -= 1
+          when '^'
+            @cury += 1
+          when 'v'
+            @cury -= 1
+          end
+          @locations << [@curx, @cury]
+        end
+      end
+    end
+  end
+end
+
+def script(*_args)
+  p = AdventOfCode::D3::Processor.new
+  while line = gets
+    p.process(line)
+  end
+  puts "Santa visits #{p.locations.length} houses"
+  return 0
+end
+
+exit script(ARGV) if __FILE__ == $0
