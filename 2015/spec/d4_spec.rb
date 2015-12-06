@@ -1,0 +1,15 @@
+require 'rspec'
+load File.join(File.dirname(__FILE__), '..', 'd4')
+
+describe AdventOfCode::D4::Miner do
+  it 'should compute the hashes correctly' do
+    [
+      ['abcdef', 609043],
+      ['pqrstuv', 1048970]
+    ].each do |(key, result)|
+      p = AdventOfCode::D4::Miner.new(key)
+      count = p.mine[0]
+      expect(count).to eq result
+    end
+  end
+end

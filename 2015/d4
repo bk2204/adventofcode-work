@@ -1,0 +1,36 @@
+#!/usr/bin/ruby
+
+require 'digest'
+
+module AdventOfCode
+  module D4
+    class Miner
+      def initialize(key)
+        @key = key
+        @counter = 1
+      end
+
+      def mine
+        loop do
+          data = @key + @counter.to_s
+          hash = Digest::MD5.hexdigest(data)
+          this = @counter
+          @counter += 1
+          if /^00000/.match hash
+            return [this, hash]
+          end
+        end
+      end
+    end
+  end
+end
+
+def script(args)
+  key = args[0]
+  p = AdventOfCode::D4::Miner.new(key)
+  count = p.mine[0]
+  puts "Answer is: #{count}"
+  return 0
+end
+
+exit script(ARGV) if __FILE__ == $0
