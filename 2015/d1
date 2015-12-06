@@ -1,0 +1,43 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D1P1
+    class Processor
+      attr_reader :floor
+      attr_accessor :callback
+
+      def initialize(callback = nil)
+        @floor = 0
+        @pos = 0
+        @callback = callback || ->(_floor, _pos) {}
+      end
+
+      def process(line)
+        line.each_char do |c|
+          @pos += 1
+          case c
+          when '('
+            @floor += 1
+          when ')'
+            @floor -= 1
+          end
+          @callback.call(@floor, @pos)
+        end
+      end
+    end
+  end
+end
+
+def script(*_args)
+  first_basement = nil
+  callback = ->(floor, pos) { first_basement ||= pos if floor == -1 }
+  p = AdventOfCode::D1P1::Processor.new(callback)
+  while line = gets
+    p.process(line)
+  end
+  puts "Santa is on floor #{p.floor}"
+  puts "Santa first entered the basement at step #{first_basement}"
+  return 0
+end
+
+exit script(ARGV) if __FILE__ == $0
