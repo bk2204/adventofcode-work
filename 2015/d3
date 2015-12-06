@@ -30,12 +30,32 @@ module AdventOfCode
         end
       end
     end
+
+    class Demuxer
+      def initialize(processors)
+        @procs = processors.times.map { Processor.new }
+        @cur = 0
+      end
+
+      def process(line)
+        line.each_char do |c|
+          @procs[@cur % @procs.length].process(c)
+          @cur += 1
+        end
+      end
+
+      def locations
+        final = Set.new
+        @procs.each { |p| final.merge(p.locations) }
+        final
+      end
+    end
   end
 end
 
-def script(*_args)
-  p = AdventOfCode::D3::Processor.new
-  while line = gets
+def script(args)
+  p = AdventOfCode::D3::Demuxer.new((args[0] || 1).to_i)
+  while line = $stdin.gets
     p.process(line)
   end
   puts "Santa visits #{p.locations.length} houses"
