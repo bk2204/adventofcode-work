@@ -1,0 +1,50 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D2
+    class Processor
+      def initialize(d1, d2, d3)
+        @dimensions = [d1, d2, d3].sort
+      end
+
+      def slack
+        d1 * d2
+      end
+
+      def box
+        2 * (d1 * d2 + d2 * d3 + d1 * d3)
+      end
+
+      def total
+        box + slack
+      end
+
+      private
+
+      def d1
+        @dimensions[0]
+      end
+
+      def d2
+        @dimensions[1]
+      end
+
+      def d3
+        @dimensions[2]
+      end
+    end
+  end
+end
+
+def script(*_args)
+  total = 0
+  while line = gets
+    raise "Invalid line" unless /^(\d+)x(\d+)x(\d+)/.match line
+    p = AdventOfCode::D2::Processor.new(*Regexp.last_match[1..3].map(&:to_i))
+    total += p.total
+  end
+  puts "Total feet needed: #{total}"
+  return 0
+end
+
+exit script(ARGV) if __FILE__ == $0
