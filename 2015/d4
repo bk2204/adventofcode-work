@@ -5,8 +5,9 @@ require 'digest'
 module AdventOfCode
   module D4
     class Miner
-      def initialize(key)
+      def initialize(key, nzeros)
         @key = key
+        @re = Regexp.new('^' + ('0' * nzeros))
         @counter = 1
       end
 
@@ -16,7 +17,7 @@ module AdventOfCode
           hash = Digest::MD5.hexdigest(data)
           this = @counter
           @counter += 1
-          if /^00000/.match hash
+          if @re.match hash
             return [this, hash]
           end
         end
@@ -26,8 +27,7 @@ module AdventOfCode
 end
 
 def script(args)
-  key = args[0]
-  p = AdventOfCode::D4::Miner.new(key)
+  p = AdventOfCode::D4::Miner.new(args[0], args[1].to_i)
   count = p.mine[0]
   puts "Answer is: #{count}"
   return 0
