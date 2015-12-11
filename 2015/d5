@@ -1,0 +1,28 @@
+#!/usr/bin/ruby
+
+require 'digest'
+
+module AdventOfCode
+  module D5
+    class Classifier
+      def initialize
+      end
+
+      def nice?(s)
+        return false unless s.count('aeiou') >= 3
+        return false unless /(.)\1/.match s
+        return false if /(ab|cd|pq|xy)/.match s
+        true
+      end
+    end
+  end
+end
+
+def script(*_args)
+  p = AdventOfCode::D5::Classifier.new
+  count = $stdin.readlines.count { |s| p.nice?(s) }
+  puts "Answer is: #{count}"
+  return 0
+end
+
+exit script(ARGV) if __FILE__ == $0
