@@ -14,14 +14,22 @@ module AdventOfCode
         return false if /(ab|cd|pq|xy)/.match s
         true
       end
+
+      def new_nice?(s)
+        return false unless /(..).*\1/.match s
+        return false unless /(.).\1/.match s
+        true
+      end
     end
   end
 end
 
 def script(*_args)
   p = AdventOfCode::D5::Classifier.new
-  count = $stdin.readlines.count { |s| p.nice?(s) }
-  puts "Answer is: #{count}"
+  strings = $stdin.readlines
+  count = strings.count { |s| p.nice?(s) }
+  count2 = strings.count { |s| p.new_nice?(s) }
+  puts "Answer is: #{count} #{count2}"
   return 0
 end
 
