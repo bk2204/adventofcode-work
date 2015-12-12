@@ -1,0 +1,61 @@
+#!/usr/bin/ruby
+
+require 'digest'
+
+module AdventOfCode
+  module D7
+    class Circuit
+      def initialize
+        @funcs = {}
+      end
+
+      def value(s)
+        begin
+          Integer(s)
+        rescue
+          c = @funcs[s].call
+          @funcs[s] = -> { c }
+          c
+        end
+      end
+
+      def process(s)
+        case s
+        when /^(\w+) -> (\w+)/
+          v = $~
+          @funcs[v[2]] = -> { value(v[1]) }
+        when /^(\w+) AND (\w+) -> (\w+)/
+          v = $~
+          @funcs[v[3]] = -> { value(v[1]) & value(v[2]) & 0xffff }
+        when /^(\w+) OR (\w+) -> (\w+)/
+          v = $~
+          @funcs[v[3]] = -> { value(v[1]) | value(v[2]) }
+        when /^(\w+) LSHIFT (\d+) -> (\w+)/
+          v = $~
+          @funcs[v[3]] = -> { (value(v[1]) << value(v[2])) & 0xffff }
+        when /^(\w+) RSHIFT (\d+) -> (\w+)/
+          v = $~
+          @funcs[v[3]] = -> { (value(v[1]) >> value(v[2])) & 0xffff }
+        when /^NOT (\w+) -> (\w+)/
+          v = $~
+          @funcs[v[2]] = -> { (~value(v[1])) & 0xffff }
+        end
+      end
+
+      def signal(s)
+        @funcs[s.to_s].call
+      end
+    end
+  end
+end
+
+def script(*_args)
+  p = AdventOfCode::D7::Circuit.new
+  $stdin.each do |line|
+    p.process(line)
+  end
+  puts "Signal on wire 'a' is: #{p.signal(:a)}"
+  return 0
+end
+
+exit script(ARGV) if __FILE__ == $0
