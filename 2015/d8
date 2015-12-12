@@ -11,16 +11,25 @@ module AdventOfCode
         raise "Invalid" unless m = /^"(.*)"$/.match(s)
         m[1].gsub(/\\(\\|"|x([0-9a-f]{2}))/, '.').length
       end
+
+      def encode(s)
+        "\"#{s.gsub(/([\\"])/, '\\\1')}\""
+      end
     end
   end
 end
 
 def script(*_args)
   p = AdventOfCode::D8::Processor.new
-  count = $stdin.readlines.reduce(0) do |memo, s|
+  lines = $stdin.readlines.map(&:chomp)
+  count = lines.reduce(0) do |memo, s|
     memo + p.as_code(s) - p.as_text(s)
   end
+  count2 = lines.reduce(0) do |memo, s|
+    memo + p.encode(s).length - p.as_code(s)
+  end
   puts "Difference in lengths is: #{count}"
+  puts "Difference in lengths for encoded values is: #{count2}"
   return 0
 end
 
