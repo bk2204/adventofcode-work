@@ -41,15 +41,55 @@ module AdventOfCode
         end
       end
     end
+
+    class BrightnessArray
+      def initialize
+        @lights = 1000.times.map { [0] * 1000 }
+      end
+
+      def on?(x, y)
+        @lights[x][y]
+      end
+
+      # Returns the total brightness.
+      def count
+        @lights.reduce(0) { |memo, row| memo + row.reduce(:+) }
+      end
+
+      def process(s)
+        case s
+        when /^turn on (\d+),(\d+) through (\d+),(\d+)/
+          increment(*Regexp.last_match[1..4].map(&:to_i), 1)
+        when /^toggle (\d+),(\d+) through (\d+),(\d+)/
+          increment(*Regexp.last_match[1..4].map(&:to_i), 2)
+        when /^turn off (\d+),(\d+) through (\d+),(\d+)/
+          increment(*Regexp.last_match[1..4].map(&:to_i), -1)
+        end
+      end
+
+      private
+
+      def increment(x1, y1, x2, y2, value)
+        (x1..x2).each do |x|
+          (y1..y2).each do |y|
+            v = @lights[x][y] + value
+            @lights[x][y] = (v < 0) ? 0 : v
+          end
+        end
+      end
+    end
   end
 end
 
 def script(*_args)
   p = AdventOfCode::D6::LightArray.new
+  b = AdventOfCode::D6::BrightnessArray.new
   $stdin.each do |line|
     p.process(line)
+    b.process(line)
   end
-  puts "Answer is: #{p.count}"
+  puts "Total lights lit: #{p.count}"
+  puts "Total brightness: #{b.count}"
   return 0
 end
 

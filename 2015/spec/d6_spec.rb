@@ -22,4 +22,13 @@ describe AdventOfCode::D6::LightArray do
     a.process('turn off 499,499 through 500,500')
     expect(a.count).to eq 999 * 1000 - 4
   end
+
+  it 'should count brightness correctly' do
+    a = AdventOfCode::D6::BrightnessArray.new
+    a.process('turn on 0,0 through 0,0')
+    expect(a.count).to eq 1
+    a = AdventOfCode::D6::BrightnessArray.new
+    a.process('toggle 0,0 through 999,999')
+    expect(a.count).to eq 2000000
+  end
 end
