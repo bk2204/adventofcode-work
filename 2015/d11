@@ -1,0 +1,40 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D11
+    class PasswordGenerator
+      def next(s)
+        s.next!
+        while !valid?(s)
+          s.next!
+        end
+        s
+      end
+
+      def valid?(s)
+        %w(i o l).each { |c| return false if s.include? c }
+        return false unless three_seqs_re.match(s)
+        doubles = []
+        s.gsub(/(.)\1/) { |m| doubles << m }
+        return false unless doubles.uniq.length >= 2
+        true
+      end
+
+      private
+
+      def three_seqs_re
+        return @three_seqs unless @three_seqs.nil?
+        three_seqs = ('a'..'x').map { |c| [c, c.next, c.next.next].join('') }
+        @three_seqs = Regexp.new(three_seqs.join('|'))
+      end
+    end
+  end
+end
+
+def script(pass)
+  p = AdventOfCode::D11::PasswordGenerator.new
+  puts "Next password is: #{p.next(pass.dup)}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
