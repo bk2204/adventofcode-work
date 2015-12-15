@@ -10,9 +10,10 @@ module AdventOfCode
   end
 end
 
-def script(seq)
+def script(seq, count)
+  count = count.to_i
   p = AdventOfCode::D10::LookSayGenerator.new
-  40.times { seq = p.next(seq) }
+  count.times { seq = p.next(seq) }
   puts "Sequence length is: #{seq.length}"
   return 0
 end
