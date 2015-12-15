@@ -1,12 +1,38 @@
 #!/usr/bin/ruby
 
+require 'json'
+
 module AdventOfCode
   module D12
     class Extractor
       def sum(s)
-        total = 0
-        s.gsub(/-?\d+/) { |m| total += Integer(m) }
-        total
+        traverse(JSON.parse(s))
+      end
+
+      def second_sum(s)
+        traverse(JSON.parse(s)) do |obj|
+          !(obj.is_a?(Hash) && obj.values.include?('red'))
+        end
+      end
+
+      def traverse(obj, &block)
+        return 0 if block_given? && !block.call(obj)
+        case obj
+        when Array
+          obj.reduce(0) { |memo, val| memo + traverse(val, &block) }
+        when Hash
+          obj.values.reduce(0) { |memo, val| memo + traverse(val, &block) }
+        when Integer
+          obj
+        when String
+          0
+        when Symbol
+          0
+        when TrueClass
+          0
+        when FalseClass
+          0
+        end
       end
     end
   end
@@ -14,7 +40,9 @@ end
 
 def script
   p = AdventOfCode::D12::Extractor.new
-  puts "Sum is: #{p.sum($stdin.read)}"
+  json = $stdin.read
+  puts "Sum is: #{p.sum(json)}"
+  puts "Second sum is: #{p.second_sum(json)}"
   return 0
 end
 
