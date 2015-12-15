@@ -11,5 +11,7 @@ describe AdventOfCode::D9::GraphTraverser do
     EOM
     text.each_line { |line| p.parse_path(line) }
     expect(p.find_shortest_path).to eq 605
+    expect(p.find_path(:<)).to eq 605
+    expect(p.find_path(:>)).to eq 982
   end
 end

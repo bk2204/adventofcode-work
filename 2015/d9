@@ -19,8 +19,8 @@ module AdventOfCode
         @cities << m[2]
       end
 
-      def find_shortest_path
-        shortest = 1e9
+      def find_path(sym)
+        best = 0.send(sym, 1e9) ? 1e9 : 0
         cities = @cities.to_a
         cities.permutation do |p|
           distance = 0
@@ -28,9 +28,13 @@ module AdventOfCode
             pair = [p[i], p[i+1]]
             distance += @paths[pair]
           end
-          shortest = distance if distance < shortest
+          best = distance if distance.send(sym, best)
         end
-        shortest
+        best
+      end
+
+      def find_shortest_path
+        find_path(:<)
       end
     end
   end
@@ -41,8 +45,10 @@ def script(*_args)
   $stdin.readlines.each do |line|
     p.parse_path(line)
   end
-  distance = p.find_shortest_path
-  puts "Shortest distance is: #{distance}"
+  shortest = p.find_shortest_path
+  longest = p.find_path(:>)
+  puts "Shortest distance is: #{shortest}"
+  puts "Longest distance is: #{longest}"
   return 0
 end
 
