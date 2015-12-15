@@ -1,0 +1,49 @@
+#!/usr/bin/ruby
+
+require 'set'
+
+module AdventOfCode
+  module D9
+    class GraphTraverser
+      def initialize
+        @paths = {}
+        @cities = Set.new
+      end
+
+      def parse_path(s)
+        raise 'Invalid' unless m = /(\S+) to (\S+) = (\d+)/.match(s)
+        pair = [m[1], m[2]]
+        @paths[pair] = m[3].to_i
+        @paths[pair.reverse] = m[3].to_i
+        @cities << m[1]
+        @cities << m[2]
+      end
+
+      def find_shortest_path
+        shortest = 1e9
+        cities = @cities.to_a
+        cities.permutation do |p|
+          distance = 0
+          (cities.length-1).times do |i|
+            pair = [p[i], p[i+1]]
+            distance += @paths[pair]
+          end
+          shortest = distance if distance < shortest
+        end
+        shortest
+      end
+    end
+  end
+end
+
+def script(*_args)
+  p = AdventOfCode::D9::GraphTraverser.new
+  $stdin.readlines.each do |line|
+    p.parse_path(line)
+  end
+  distance = p.find_shortest_path
+  puts "Shortest distance is: #{distance}"
+  return 0
+end
+
+exit script(ARGV) if __FILE__ == $0
