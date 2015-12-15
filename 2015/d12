@@ -1,0 +1,21 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D12
+    class Extractor
+      def sum(s)
+        total = 0
+        s.gsub(/-?\d+/) { |m| total += Integer(m) }
+        total
+      end
+    end
+  end
+end
+
+def script
+  p = AdventOfCode::D12::Extractor.new
+  puts "Sum is: #{p.sum($stdin.read)}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
