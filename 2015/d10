@@ -1,0 +1,20 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D10
+    class LookSayGenerator
+      def next(s)
+        s.gsub(/((.)\2*)/) { |m| "#{m.length}#{m[0]}" }
+      end
+    end
+  end
+end
+
+def script(seq)
+  p = AdventOfCode::D10::LookSayGenerator.new
+  40.times { seq = p.next(seq) }
+  puts "Sequence length is: #{seq.length}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
