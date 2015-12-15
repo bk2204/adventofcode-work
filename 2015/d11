@@ -4,6 +4,7 @@ module AdventOfCode
   module D11
     class PasswordGenerator
       def next(s)
+        s = s.dup
         s.next!
         while !valid?(s)
           s.next!
@@ -33,7 +34,8 @@ end
 
 def script(pass)
   p = AdventOfCode::D11::PasswordGenerator.new
-  puts "Next password is: #{p.next(pass.dup)}"
+  pass = p.next(pass)
+  puts "Next two passwords are: #{pass} #{p.next(pass)}"
   return 0
 end
 
