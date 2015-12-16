@@ -13,11 +13,16 @@ module AdventOfCode
       def parse(s)
         m = /^(\S+) would (gain|lose) (\d+) happiness.*next to (\S+)\./.match s
         raise 'Invalid' unless m
-        pair = [m[1], m[4]]
-        @parties << m[1]
-        @parties << m[4]
         magnitude = m[3].to_i
-        @pairs[pair] = m[2] == 'lose' ? -magnitude : magnitude
+        add_pair(m[1], m[4], m[2] == 'lose' ? -magnitude : magnitude)
+      end
+
+      def add_me
+        parties = @parties.to_a
+        parties.each do |p|
+          add_pair(p, 'me', 0)
+          add_pair('me', p, 0)
+        end
       end
 
       def optimal_happiness
@@ -34,6 +39,15 @@ module AdventOfCode
         end
         choices.max
       end
+
+      private
+
+      def add_pair(a, b, happiness)
+        pair = [a, b]
+        @parties << a
+        @parties << b
+        @pairs[pair] = happiness
+      end
     end
   end
 end
@@ -44,6 +58,8 @@ def script
     p.parse(line)
   end
   puts "Optimal happiness is: #{p.optimal_happiness}"
+  p.add_me
+  puts "Optimal happiness is now: #{p.optimal_happiness}"
   return 0
 end
 
