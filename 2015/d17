@@ -1,0 +1,60 @@
+#!/usr/bin/ruby
+
+require 'set'
+
+module AdventOfCode
+  module D17
+    Container = Struct.new(:number, :size) do
+      def <=>(other)
+        number <=> other.number
+      end
+
+      def ==(other)
+        number == other.number
+      end
+    end
+
+    class ContainerSet
+      def initialize(containers, quantity)
+        @containers = containers.map.with_index do |(size), num|
+          Container.new(num, size)
+        end
+        @quantity = quantity
+      end
+
+      # Sort the containers and find the longest possible set that has a
+      # quantity less than or equal to @quantity.  This will be the set that has
+      # the smallest containers.  This is an optimization, since dealing with
+      # large numbers of permutations will become unmanageable.
+      def longest_set
+        total = 0
+        @containers.sort_by(&:size).each_with_index do |item, i|
+          total += item.size
+          return i if total >= @quantity
+        end
+        containers.length
+      end
+
+      def count
+        results = Set.new
+        (1..longest_set).each do |size|
+          @containers.combination(size) do |s|
+            total = s.map(&:size).reduce(0, :+)
+            results << s.sort if total == @quantity
+          end
+        end
+        results.length
+      end
+    end
+  end
+end
+
+def script(liters)
+  sizes = $stdin.each_line.map(&:to_i)
+  set = AdventOfCode::D17::ContainerSet.new(sizes, liters.to_i)
+  puts "Longest set is: #{set.longest_set}"
+  puts "Combination count is: #{set.count}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
