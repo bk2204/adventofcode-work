@@ -1,0 +1,94 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D15
+    class Ingredient
+      attr_reader :name, :capacity, :durability, :flavor, :texture, :calories
+
+      def initialize(name, capacity, durability, flavor, texture, calories)
+        @name = name
+        @capacity = capacity
+        @durability = durability
+        @flavor = flavor
+        @texture = texture
+        @calories = calories
+      end
+
+      def self.parse(s)
+        name, attrstr = s.split(':', 2)
+        attrs = attrstr[1..-1].split(', ').map { |t| Integer(t.split(' ')[1]) }
+        new(name, *attrs)
+      end
+    end
+
+    class Cookie
+      attr_reader :items
+
+      def initialize(items)
+        @items = items
+      end
+
+      def +(other)
+        Cookie.new(@items.dup.merge(other.items))
+      end
+
+      def space
+        100 - @items.values.reduce(0, :+)
+      end
+
+      def score
+        attrs = [:capacity, :durability, :flavor, :texture]
+        score = [0, 0, 0, 0]
+        @items.each do |ingred, amount|
+          as = attrs.map { |a| ingred.send(a) * amount }
+          score = score.length.times.map { |i| as[i] + score[i] }
+        end
+        score = score.map { |val| val < 0 ? 0 : val }
+        score.reduce(1, :*)
+      end
+    end
+
+    # This is really inefficient.  A smarter backtracking algorithm would be
+    # beneficial.
+    class Optimizer
+      def initialize(ingredients)
+        @ingredients = ingredients
+      end
+
+      def optimize
+        round(Cookie.new({}), @ingredients).score
+      end
+
+      private
+
+      def round(cookie, remaining)
+        return cookie if remaining.empty?
+        return cookie if cookie.space.zero?
+        remaining = remaining.dup
+        this = remaining.slice!(0)
+        best_cookie = nil
+        (0..cookie.space).each do |i|
+          mine = Cookie.new({ this => i }) + cookie
+          total = round(mine, remaining)
+          if best_cookie.nil? || best_cookie.score < total.score
+            best_cookie = total
+          end
+        end
+        best_cookie
+      end
+    end
+  end
+end
+
+def script
+  ingredients = []
+  $stdin.each_line do |line|
+    ingredients << AdventOfCode::D15::Ingredient.parse(line)
+  end
+  opt = AdventOfCode::D15::Optimizer.new(ingredients)
+  max = opt.optimize
+  puts "Most points is: #{max}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
