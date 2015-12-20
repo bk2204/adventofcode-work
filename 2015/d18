@@ -5,9 +5,12 @@ require 'set'
 module AdventOfCode
   module D18
     class LightArray
-      def initialize(size)
+      attr_reader :lights
+
+      def initialize(size, stuck = false)
         @lights = size.times.map { [false] * size }
         @size = size
+        @stuck = stuck
       end
 
       def load_state(s)
@@ -35,17 +38,30 @@ module AdventOfCode
         @lights = new_lights
       end
 
+      def to_s
+        s = ''
+        @size.times do |y|
+          @size.times do |x|
+            s += state(x, y) ? '#' : '.'
+          end
+          s += "\n"
+        end
+        s
+      end
+
       def count
         total = 0
         @size.times do |x|
           @size.times do |y|
-            total += 1 if @lights[x][y]
+            total += 1 if state(x, y)
           end
         end
         total
       end
 
       def state(x, y)
+        edge = [0, @size - 1]
+        return true if @stuck && edge.include?(x) && edge.include?(y)
         return false unless (0...@size).include?(x)
         return false unless (0...@size).include?(y)
         @lights[x][y]
@@ -55,10 +71,13 @@ module AdventOfCode
 end
 
 def script
-  la = AdventOfCode::D18::LightArray.new(100)
-  la.load_state($stdin.read)
-  100.times { la.next! }
-  puts "Number of lights lit is: #{la.count}"
+  state = $stdin.read
+  [false, true].each do |stuck|
+    la = AdventOfCode::D18::LightArray.new(100, stuck)
+    la.load_state(state)
+    100.times { la.next! }
+    puts "Number of lights lit is: #{la.count} (stuck mode #{stuck})"
+  end
   return 0
 end
 
