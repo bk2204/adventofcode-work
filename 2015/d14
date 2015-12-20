@@ -1,0 +1,45 @@
+#!/usr/bin/ruby
+
+require 'set'
+
+module AdventOfCode
+  module D14
+    class Reindeer
+      attr_reader :name, :speed, :time, :slack_time
+
+      def initialize(name, speed, time, slack_time)
+        @name = name
+        @speed = speed
+        @time = time
+        @slack_time = slack_time
+      end
+
+      def self.parse(s)
+        m = /^(\S+) can fly (\d+) km\/s for (\d+).*for (\d+)/.match s
+        raise 'Invalid' unless m
+        new(m[1], m[2].to_i, m[3].to_i, m[4].to_i)
+      end
+
+      def distance(secs)
+        chunk_size = @time + @slack_time
+        chunks = secs / chunk_size
+        remainder = secs % chunk_size
+        seconds = chunks * @time + ((remainder < @time) ? remainder : @time)
+        seconds * @speed
+      end
+    end
+  end
+end
+
+def script(seconds)
+  seconds = seconds.to_i
+  reindeer = []
+  $stdin.each_line do |line|
+    reindeer << AdventOfCode::D14::Reindeer.parse(line)
+  end
+  distance = reindeer.map { |r| r.distance(seconds) }.max
+  puts "Furthest distance is: #{distance}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
