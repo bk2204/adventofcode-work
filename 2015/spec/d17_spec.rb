@@ -11,4 +11,9 @@ describe AdventOfCode::D17::ContainerSet do
     s = AdventOfCode::D17::ContainerSet.new([20, 15, 10, 5, 5], 25)
     expect(s.count).to eq 4
   end
+
+  it 'should produce the right number of minimal containers' do
+    s = AdventOfCode::D17::ContainerSet.new([20, 15, 10, 5, 5], 25)
+    expect(s.count_minimum_containers).to eq 3
+  end
 end

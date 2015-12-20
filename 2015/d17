@@ -35,7 +35,7 @@ module AdventOfCode
         containers.length
       end
 
-      def count
+      def results
         results = Set.new
         (1..longest_set).each do |size|
           @containers.combination(size) do |s|
@@ -43,6 +43,15 @@ module AdventOfCode
             results << s.sort if total == @quantity
           end
         end
+        results
+      end
+
+      def count_minimum_containers
+        r = results.sort_by(&:size)
+        r.select { |c| c.size == r[0].size }.count
+      end
+
+      def count
         results.length
       end
     end
@@ -54,6 +63,7 @@ def script(liters)
   set = AdventOfCode::D17::ContainerSet.new(sizes, liters.to_i)
   puts "Longest set is: #{set.longest_set}"
   puts "Combination count is: #{set.count}"
+  puts "Combinations of smallest containers is: #{set.count_minimum_containers}"
   return 0
 end
 
