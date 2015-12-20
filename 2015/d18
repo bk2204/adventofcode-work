@@ -1,0 +1,65 @@
+#!/usr/bin/ruby
+
+require 'set'
+
+module AdventOfCode
+  module D18
+    class LightArray
+      def initialize(size)
+        @lights = size.times.map { [false] * size }
+        @size = size
+      end
+
+      def load_state(s)
+        s.each_line.with_index do |line, y|
+          @size.times do |x|
+            @lights[x][y] = line[x] == '#'
+          end
+        end
+      end
+
+      def next!
+        new_lights = @size.times.map { [false] * @size }
+        @size.times do |x|
+          @size.times do |y|
+            total = 0
+            (-1..1).each do |sx|
+              (-1..1).each do |sy|
+                next if sx.zero? && sy.zero?
+                total += state(x + sx, y + sy) ? 1 : 0
+              end
+            end
+            new_lights[x][y] = state(x, y) ? (2..3).include?(total) : total == 3
+          end
+        end
+        @lights = new_lights
+      end
+
+      def count
+        total = 0
+        @size.times do |x|
+          @size.times do |y|
+            total += 1 if @lights[x][y]
+          end
+        end
+        total
+      end
+
+      def state(x, y)
+        return false unless (0...@size).include?(x)
+        return false unless (0...@size).include?(y)
+        @lights[x][y]
+      end
+    end
+  end
+end
+
+def script
+  la = AdventOfCode::D18::LightArray.new(100)
+  la.load_state($stdin.read)
+  100.times { la.next! }
+  puts "Number of lights lit is: #{la.count}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
