@@ -26,6 +26,14 @@ describe AdventOfCode::D16::Sue do
     expect(s1 === s2).to eq false
   end
 
+  it 'should handle pseudo matching correctly' do
+    mine = AdventOfCode::D16::Sue.new(1, cats: 3, trees: 3, pomeranians: 3,
+                                      goldfish: 3)
+    test = AdventOfCode::D16::Sue.new(2, cats: 4, trees: 5, pomeranians: 2,
+                                      goldfish: 1)
+    expect(test.pseudo_match(mine)).to eq true
+  end
+
   it 'should parse attributes correctly' do
     line = 'Sue 1: goldfish: 9, cars: 0, samoyeds: 9'
     sue = AdventOfCode::D16::Sue.parse(line)

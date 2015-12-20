@@ -29,6 +29,22 @@ module AdventOfCode
         end
         true
       end
+
+      # "mine" is the real Sue.
+      def pseudo_match(mine)
+        lookup = {
+          cats: :<,
+          trees: :<,
+          pomeranians: :>,
+          goldfish: :>
+        }
+        mine.attributes.each do |attr, num|
+          next if !num || !attributes[attr]
+          sym = lookup[attr] || :==
+          return false if !num.send(sym, attributes[attr])
+        end
+        true
+      end
     end
   end
 end
@@ -51,8 +67,10 @@ def script
   sues = $stdin.each_line.map do |line|
     AdventOfCode::D16::Sue.parse(line)
   end
-  num = sues.select { |s| s === mine }[0].num
-  puts "Sue is: #{num}"
+  puts "Sue is: #{sues.select { |s| s === mine }[0].num}"
+  real = sues.select { |s| s.pseudo_match(mine) }
+  raise "broken" if real.length != 1
+  puts "Real Sue is: #{real[0].num}"
   return 0
 end
 
