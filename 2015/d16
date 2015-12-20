@@ -1,0 +1,59 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D16
+    class Sue
+      attr_reader :num, :attributes
+
+      def initialize(num, attributes)
+        @num = num
+        @attributes = attributes
+      end
+
+      def self.parse(s)
+        name, attrstr = s.split(': ', 2)
+        attrs = attrstr.split(', ').map do |t|
+          pair = t.split(': ')
+          pair[0] = pair[0].to_sym
+          pair[1] = Integer(pair[1])
+          pair
+        end.to_h
+        num = Integer(name[4..-1])
+        new(num, attrs)
+      end
+
+      def ===(other)
+        other.attributes.each do |attr, num|
+          next if !num || !attributes[attr]
+          return false if num != attributes[attr]
+        end
+        true
+      end
+    end
+  end
+end
+
+def script
+  attrs = {
+    children: 3,
+    cats: 7,
+    samoyeds: 2,
+    pomeranians: 3,
+    akitas: 0,
+    vizslas: 0,
+    goldfish: 5,
+    trees: 3,
+    cars: 2,
+    perfumes: 1,
+  }
+  mine = AdventOfCode::D16::Sue.new(-1, attrs)
+  sues = []
+  sues = $stdin.each_line.map do |line|
+    AdventOfCode::D16::Sue.parse(line)
+  end
+  num = sues.select { |s| s === mine }[0].num
+  puts "Sue is: #{num}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
