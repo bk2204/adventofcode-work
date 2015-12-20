@@ -5,13 +5,14 @@ require 'set'
 module AdventOfCode
   module D14
     class Reindeer
-      attr_reader :name, :speed, :time, :slack_time
+      attr_reader :name, :speed, :time, :slack_time, :points
 
       def initialize(name, speed, time, slack_time)
         @name = name
         @speed = speed
         @time = time
         @slack_time = slack_time
+        @points = 0
       end
 
       def self.parse(s)
@@ -27,6 +28,26 @@ module AdventOfCode
         seconds = chunks * @time + ((remainder < @time) ? remainder : @time)
         seconds * @speed
       end
+
+      def add_point
+        @points += 1
+      end
+    end
+
+    class Scorer
+      def initialize(list)
+        @list = list
+      end
+
+      def run(secs)
+        (1..secs).each do |t|
+          distances = @list.map { |r| [r, r.distance(t)] }
+          farthest = distances.max { |a, b| a[1] <=> b[1] }
+          distances.select { |r| r[1] == farthest[1] }.each do |r|
+            r[0].add_point
+          end
+        end
+      end
     end
   end
 end
@@ -38,7 +59,11 @@ def script(seconds)
     reindeer << AdventOfCode::D14::Reindeer.parse(line)
   end
   distance = reindeer.map { |r| r.distance(seconds) }.max
+  sc = AdventOfCode::D14::Scorer.new(reindeer)
+  sc.run(seconds)
+  max_points = reindeer.map { |r| r.points }.max
   puts "Furthest distance is: #{distance}"
+  puts "Max points is: #{max_points}"
   return 0
 end
 

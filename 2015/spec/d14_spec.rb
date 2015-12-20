@@ -26,4 +26,22 @@ describe AdventOfCode::D14::Reindeer do
       expect(r.distance(1000)).to eq distance
     end
   end
+
+  it 'should find the fastest reindeer' do
+    list = []
+    reindeer = [
+      ['Comet', 14, 10, 127, 312],
+      ['Dancer', 16, 11, 162, 689]
+    ]
+    results = {}
+    reindeer.each do |(name, speed, time, slack_time, distance)|
+      list << AdventOfCode::D14::Reindeer.new(name, speed, time, slack_time)
+      results[name] = distance
+    end
+    s = AdventOfCode::D14::Scorer.new(list)
+    s.run(1000)
+    list.each do |r|
+      expect(r.points).to eq results[r.name]
+    end
+  end
 end
