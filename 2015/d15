@@ -46,13 +46,20 @@ module AdventOfCode
         score = score.map { |val| val < 0 ? 0 : val }
         score.reduce(1, :*)
       end
+
+      def calories
+        @items.map do |ingred, amount|
+          ingred.calories * amount
+        end.reduce(0, :+)
+      end
     end
 
     # This is really inefficient.  A smarter backtracking algorithm would be
     # beneficial.
     class Optimizer
-      def initialize(ingredients)
+      def initialize(ingredients, calories = nil)
         @ingredients = ingredients
+        @calories = calories
       end
 
       def optimize
@@ -62,14 +69,17 @@ module AdventOfCode
       private
 
       def round(cookie, remaining)
-        return cookie if remaining.empty?
-        return cookie if cookie.space.zero?
+        return nil if @calories && cookie.calories > @calories
+        if remaining.empty? || cookie.space.zero?
+          return !@calories || cookie.calories == @calories ? cookie : nil
+        end
         remaining = remaining.dup
         this = remaining.slice!(0)
         best_cookie = nil
         (0..cookie.space).each do |i|
           mine = Cookie.new({ this => i }) + cookie
           total = round(mine, remaining)
+          next unless total
           if best_cookie.nil? || best_cookie.score < total.score
             best_cookie = total
           end
@@ -80,12 +90,13 @@ module AdventOfCode
   end
 end
 
-def script
+def script(calories = nil)
+  calories = calories.to_i if calories
   ingredients = []
   $stdin.each_line do |line|
     ingredients << AdventOfCode::D15::Ingredient.parse(line)
   end
-  opt = AdventOfCode::D15::Optimizer.new(ingredients)
+  opt = AdventOfCode::D15::Optimizer.new(ingredients, calories)
   max = opt.optimize
   puts "Most points is: #{max}"
   return 0
