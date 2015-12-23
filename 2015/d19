@@ -31,11 +31,31 @@ module AdventOfCode
             next if b != offset
             chemical = m[0]
             @replacements[chemical].each do |r|
-              results << (s[0...b] + r + s[e..-1])
+              t = s.dup
+              t[b...e] = r
+              results << t
             end
           end
         end
         results
+      end
+
+      def derive(s)
+        # Reverse the strings so that we can match from the right, since this is
+        # an unambiguous grammar.
+        reverse = {}
+        start = replacements['e'].map { |str| str.reverse }
+        replacements.each do |k, v|
+          v.each { |p| reverse[p.reverse] = k.reverse if k != 'e' }
+        end
+        re = Regexp.new reverse.keys.map { |k| Regexp.escape(k) }.join('|')
+        steps = 0
+        t = s.reverse
+        until start.include? t
+          t.sub!(re, reverse)
+          steps += 1
+        end
+        steps + 1
       end
     end
   end
@@ -47,6 +67,7 @@ def script
   pattern.chomp!
   rep = AdventOfCode::D19::Replacer.parse(rules)
   puts "Number of distinct molecules: #{rep.combinations(pattern).length}"
+  puts "Number of steps required: #{rep.derive(pattern)}"
   return 0
 end
 
