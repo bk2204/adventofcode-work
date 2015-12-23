@@ -1,0 +1,53 @@
+#!/usr/bin/ruby
+
+require 'set'
+
+module AdventOfCode
+  module D19
+    class Replacer
+      attr_reader :replacements
+
+      def initialize(replacements)
+        @replacements = replacements
+      end
+
+      def self.parse(s)
+        replacements = {}
+        s.each_line do |line|
+          /^(\w+) => (\w+)/.match(line) do |m|
+            replacements[m[1]] ||= []
+            replacements[m[1]] << m[2]
+          end
+        end
+        new(replacements)
+      end
+
+      def combinations(s)
+        results = Set.new
+        re = Regexp.new replacements.keys.map { |k| Regexp.escape(k) }.join('|')
+        s.length.times do |offset|
+          re.match(s, offset) do |m|
+            b, e = m.offset(0)
+            next if b != offset
+            chemical = m[0]
+            @replacements[chemical].each do |r|
+              results << (s[0...b] + r + s[e..-1])
+            end
+          end
+        end
+        results
+      end
+    end
+  end
+end
+
+def script
+  state = $stdin.read
+  rules, pattern = state.split("\n\n")
+  pattern.chomp!
+  rep = AdventOfCode::D19::Replacer.parse(rules)
+  puts "Number of distinct molecules: #{rep.combinations(pattern).length}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
