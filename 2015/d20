@@ -7,27 +7,47 @@ module AdventOfCode
     class PresentDeliverer
       include Enumerable
 
-      def initialize
+      def initialize(coefficient, limit = nil)
         @house = 1
+        @coefficient = coefficient
+        @limit = limit
       end
 
       def each
+        seen = []
         loop do
           factors = Set.new
           1.upto(Math.sqrt(@house).to_i) do |i|
-            factors << i << (@house / i) if @house % i == 0
+            if @house % i == 0
+              add_factor(seen, factors, i)
+              add_factor(seen, factors, @house / i)
+            end
           end
           @house += 1
-          yield factors.reduce(0, :+) * 10
+          yield factors.reduce(0, :+) * @coefficient
         end
+      end
+
+      private
+
+      def add_factor(seen, factors, f)
+        return if factors.include? f
+        if @limit
+          seen[f] = 0 if seen[f].nil?
+          seen[f] += 1
+          return if seen[f] > @limit
+        end
+        factors << f
       end
     end
   end
 end
 
-def script(threshold)
+def script(threshold, coefficient, limit = nil)
   threshold = threshold.to_i
-  pd = AdventOfCode::D20::PresentDeliverer.new
+  coefficient = coefficient.to_i
+  limit = limit.to_i if limit
+  pd = AdventOfCode::D20::PresentDeliverer.new(coefficient, limit)
   factor_sum, first_i = pd.each_with_index.find { |obj, i| obj >= threshold }
   puts "First house: #{first_i + 1} (factor sum: #{factor_sum})"
   return 0
