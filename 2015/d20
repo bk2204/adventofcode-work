@@ -1,0 +1,36 @@
+#!/usr/bin/ruby
+
+require 'set'
+
+module AdventOfCode
+  module D20
+    class PresentDeliverer
+      include Enumerable
+
+      def initialize
+        @house = 1
+      end
+
+      def each
+        loop do
+          factors = Set.new
+          1.upto(Math.sqrt(@house).to_i) do |i|
+            factors << i << (@house / i) if @house % i == 0
+          end
+          @house += 1
+          yield factors.reduce(0, :+) * 10
+        end
+      end
+    end
+  end
+end
+
+def script(threshold)
+  threshold = threshold.to_i
+  pd = AdventOfCode::D20::PresentDeliverer.new
+  factor_sum, first_i = pd.each_with_index.find { |obj, i| obj >= threshold }
+  puts "First house: #{first_i + 1} (factor sum: #{factor_sum})"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
