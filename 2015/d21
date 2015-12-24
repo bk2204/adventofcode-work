@@ -101,7 +101,8 @@ module AdventOfCode
 end
 
 def script(bhp, bdamage, barmor)
-  costs = []
+  win_costs = []
+  lose_costs = []
   AdventOfCode::D21::EquipmentSet.combination do |es|
     boss = AdventOfCode::D21::Attacker.new(hit_points: bhp.to_i,
                                            damage: bdamage.to_i,
@@ -109,9 +110,10 @@ def script(bhp, bdamage, barmor)
     player = AdventOfCode::D21::Attacker.new(hit_points: 100)
     player.equipment = es
     sim = AdventOfCode::D21::Simulator.new(player, boss)
-    costs << es.cost if sim.winner == :player
+    (sim.winner == :player ? win_costs : lose_costs) << es.cost
   end
-  puts "Cheapest cost: #{costs.min}"
+  puts "Cheapest cost: #{win_costs.min}"
+  puts "Most expensive cost: #{lose_costs.max}"
   return 0
 end
 
