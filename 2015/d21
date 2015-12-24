@@ -1,0 +1,118 @@
+#!/usr/bin/ruby
+
+module AdventOfCode
+  module D21
+    class EquipmentSet
+      attr_reader :damage, :armor, :cost
+
+      def self.weapons
+        [
+          {cost:  8, damage: 4, armor: 0, name: 'Dagger'},
+          {cost: 10, damage: 5, armor: 0, name: 'Shortsword'},
+          {cost: 25, damage: 6, armor: 0, name: 'Warhammer'},
+          {cost: 40, damage: 7, armor: 0, name: 'Longsword'},
+          {cost: 74, damage: 8, armor: 0, name: 'Greataxe'},
+        ]
+      end
+
+      def self.armor
+        [
+          {cost:   0, damage: 0, armor: 0, name: 'None'},
+          {cost:  13, damage: 0, armor: 1, name: 'Leather'},
+          {cost:  31, damage: 0, armor: 2, name: 'Chainmail'},
+          {cost:  53, damage: 0, armor: 3, name: 'Splintmail'},
+          {cost:  75, damage: 0, armor: 4, name: 'Bandedmail'},
+          {cost: 102, damage: 0, armor: 5, name: 'Platemail'},
+        ]
+      end
+
+      def self.rings
+        [
+          {cost:  25, damage: 1, armor: 0, name: 'Damage +1'},
+          {cost:  50, damage: 2, armor: 0, name: 'Damage +2'},
+          {cost: 100, damage: 3, armor: 0, name: 'Damage +3'},
+          {cost:  20, damage: 0, armor: 1, name: 'Defense +1'},
+          {cost:  40, damage: 0, armor: 2, name: 'Defense +2'},
+          {cost:  80, damage: 0, armor: 3, name: 'Defense +3'},
+        ]
+      end
+
+      def self.combination
+        weapons.each do |w|
+          armor.each do |a|
+            3.times do |num|
+              rings.combination(num) do |c|
+                yield new(w, a, *c)
+              end
+            end
+          end
+        end
+      end
+
+      def initialize(*items)
+        @items = items
+        @damage = items.map { |item| item[:damage] }.reduce(0, :+)
+        @armor = items.map { |item| item[:armor] }.reduce(0, :+)
+        @cost = items.map { |item| item[:cost] }.reduce(0, :+)
+      end
+    end
+
+    class Attacker
+      attr_accessor :damage, :armor, :hit_points
+
+      def initialize(options = {})
+        @damage = options[:damage]
+        @armor = options[:armor]
+        @hit_points = options[:hit_points]
+      end
+
+      def equipment=(e)
+        @equipment = e
+        @damage = e.damage
+        @armor = e.armor
+      end
+    end
+
+    class Simulator
+      def initialize(player, boss)
+        @player = player
+        @boss = boss
+      end
+
+      def winner
+        player_damage = damage(@player.damage, @boss.armor)
+        boss_damage = damage(@boss.damage, @player.armor)
+        loop do
+          @boss.hit_points -= player_damage
+          return :player if @boss.hit_points <= 0
+          @player.hit_points -= boss_damage
+          return :boss if @player.hit_points <= 0
+        end
+      end
+
+      private
+
+      def damage(d, a)
+        diff = d - a
+        diff < 1 ? 1 : diff
+      end
+    end
+  end
+end
+
+def script(bhp, bdamage, barmor)
+  costs = []
+  AdventOfCode::D21::EquipmentSet.combination do |es|
+    boss = AdventOfCode::D21::Attacker.new(hit_points: bhp.to_i,
+                                           damage: bdamage.to_i,
+                                           armor: barmor.to_i)
+    player = AdventOfCode::D21::Attacker.new(hit_points: 100)
+    player.equipment = es
+    sim = AdventOfCode::D21::Simulator.new(player, boss)
+    costs << es.cost if sim.winner == :player
+  end
+  puts "Cheapest cost: #{costs.min}"
+  return 0
+end
+
+exit script(*ARGV) if __FILE__ == $0
