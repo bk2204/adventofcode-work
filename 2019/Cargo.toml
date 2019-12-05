@@ -1,0 +1,15 @@
+[package]
+name = "adventofcode"
+version = "0.1.0"
+authors = ["brian m. carlson <sandals@crustytoothpaste.net>"]
+edition = "2018"
+
+[[bin]]
+name = "d1"
+path = "src/d1.rs"
+
+[lib]
+name = "adventofcode"
+path = "src/lib/mod.rs"
+
+[dependencies]
