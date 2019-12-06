@@ -12,6 +12,10 @@ path = "src/d1.rs"
 name = "d2"
 path = "src/d2.rs"
 
+[[bin]]
+name = "d3"
+path = "src/d3.rs"
+
 [lib]
 name = "adventofcode"
 path = "src/lib/mod.rs"
