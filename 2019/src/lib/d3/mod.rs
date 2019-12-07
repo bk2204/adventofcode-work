@@ -1,4 +1,5 @@
 use std::cmp;
+use std::collections::BTreeMap;
 use std::ops::{Index, IndexMut};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -82,7 +83,7 @@ impl IntoIterator for Grid {
 pub struct Graph {
     paths: Vec<Vec<Segment>>,
     arr: Grid,
-    intersections: Vec<Point>,
+    intersections: BTreeMap<Point, Vec<usize>>,
 }
 
 impl Graph {
@@ -106,40 +107,56 @@ impl Graph {
         Graph {
             paths: data,
             arr: Grid::new(max_dimension as usize),
-            intersections: Vec::new(),
+            intersections: BTreeMap::new(),
         }
     }
 
     pub fn run(&mut self) {
-        for (i, path) in self.paths.iter().enumerate() {
+        let arr = &mut self.arr;
+        let intersections = &mut self.intersections;
+        let paths = &self.paths;
+        let len = self.paths.len();
+
+        // This algorithm is two pass because it's much, much faster that way.  Storing the number
+        // of steps taken for point uses so much memory that allocation dominates the time spent.
+        Self::each_point(paths, |p, i, _| Self::mark(arr, intersections, len, i, p));
+        Self::each_point(paths, |p, _, steps| {
+            if let Some(v) = intersections.get_mut(&p) {
+                v.push(steps)
+            }
+        });
+    }
+
+    fn each_point<F: FnMut(Point, usize, usize)>(paths: &Vec<Vec<Segment>>, mut f: F) {
+        for (i, path) in paths.iter().enumerate() {
             let mut cur = Point(0, 0);
+            let mut steps = 0;
             for segment in path {
                 for point in segment.points_from(cur) {
-                    Self::mark(
-                        &mut self.arr,
-                        &mut self.intersections,
-                        self.paths.len(),
-                        i,
-                        point,
-                    );
+                    steps += 1;
+                    f(point, i, steps);
                     cur = point;
                 }
             }
         }
-        self.intersections.sort();
-        self.intersections.dedup();
     }
 
-    pub fn intersections(&self) -> impl Iterator<Item = &Point> {
-        self.intersections.iter()
+    pub fn intersections<'a>(&'a self) -> impl Iterator<Item = (Point, usize)> + 'a {
+        self.intersections.iter().map(|(&p, v)| (p, v.iter().sum()))
     }
 
-    fn mark(arr: &mut Grid, intersections: &mut Vec<Point>, npaths: usize, i: usize, p: Point) {
+    fn mark(
+        arr: &mut Grid,
+        intersections: &mut BTreeMap<Point, Vec<usize>>,
+        npaths: usize,
+        i: usize,
+        p: Point,
+    ) {
         let (x, y) = (p.0 as isize, p.1 as isize);
         let mask = ((1u16 << npaths) - 1) as u8;
         arr[x][y] |= 1u8 << i;
         if arr[x][y] == mask {
-            intersections.push(p)
+            intersections.insert(p, vec![]);
         }
     }
 }
@@ -167,10 +184,10 @@ impl Segment {
     fn points_from(&self, p: Point) -> Box<dyn Iterator<Item = Point>> {
         let len = self.len;
         match self.dir {
-            Direction::North => Box::new((p.1..=(p.1 + len)).map(move |i| Point(p.0, i))),
-            Direction::South => Box::new(((p.1 - len)..=p.1).rev().map(move |i| Point(p.0, i))),
-            Direction::East => Box::new((p.0..=(p.0 + len)).map(move |i| Point(i, p.1))),
-            Direction::West => Box::new(((p.0 - len)..=p.0).rev().map(move |i| Point(i, p.1))),
+            Direction::North => Box::new((p.1 + 1..=(p.1 + len)).map(move |i| Point(p.0, i))),
+            Direction::South => Box::new(((p.1 - len)..p.1).rev().map(move |i| Point(p.0, i))),
+            Direction::East => Box::new((p.0 + 1..=(p.0 + len)).map(move |i| Point(i, p.1))),
+            Direction::West => Box::new(((p.0 - len)..p.0).rev().map(move |i| Point(i, p.1))),
         }
     }
 
@@ -210,32 +227,61 @@ impl Parser {
 mod tests {
     use super::{Graph, Parser};
 
-    fn process(path1: &str, path2: &str) -> i64 {
+    fn distance(path1: &str, path2: &str) -> i64 {
         let mut g = Graph::new(vec![Parser::parse(path1), Parser::parse(path2)]);
         g.run();
         g.intersections()
-            .map(|p| p.0.abs() + p.1.abs())
+            .map(|(p, _)| p.0.abs() + p.1.abs())
+            .filter(|&v| v > 0)
+            .min()
+            .unwrap()
+    }
+
+    fn steps(path1: &str, path2: &str) -> usize {
+        let mut g = Graph::new(vec![Parser::parse(path1), Parser::parse(path2)]);
+        g.run();
+        g.intersections()
+            .map(|(_, steps)| steps)
             .filter(|&v| v > 0)
             .min()
             .unwrap()
     }
 
     #[test]
-    fn integration() {
-        assert_eq!(process("R8,U5,L5,D3", "U7,R6,D4,L4"), 6);
+    fn integration_distance() {
+        assert_eq!(distance("R8,U5,L5,D3", "U7,R6,D4,L4"), 6);
         assert_eq!(
-            process(
+            distance(
                 "R75,D30,R83,U83,L12,D49,R71,U7,L72",
                 "U62,R66,U55,R34,D71,R55,D58,R83"
             ),
             159
         );
         assert_eq!(
-            process(
+            distance(
                 "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51",
                 "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"
             ),
             135
+        );
+    }
+
+    #[test]
+    fn integration_steps() {
+        assert_eq!(steps("R8,U5,L5,D3", "U7,R6,D4,L4"), 30);
+        assert_eq!(
+            steps(
+                "R75,D30,R83,U83,L12,D49,R71,U7,L72",
+                "U62,R66,U55,R34,D71,R55,D58,R83"
+            ),
+            610
+        );
+        assert_eq!(
+            steps(
+                "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51",
+                "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"
+            ),
+            410
         );
     }
 }
