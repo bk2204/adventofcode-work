@@ -20,6 +20,7 @@ enum Instruction {
     Equals(Parameter, Parameter, usize),
 }
 
+#[derive(Clone)]
 pub struct Program {
     data: Vec<i64>,
     off: usize,
