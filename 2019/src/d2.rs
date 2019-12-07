@@ -3,7 +3,7 @@ use adventofcode::d2::{Parser, Program};
 use std::io;
 use std::io::BufRead;
 
-fn program_for(inp: &str, noun: u64, verb: u64) -> u64 {
+fn program_for(inp: &str, noun: i64, verb: i64) -> i64 {
     let mut p = Program::new(Parser::parse(&inp));
     p[1] = noun;
     p[2] = verb;
@@ -11,9 +11,9 @@ fn program_for(inp: &str, noun: u64, verb: u64) -> u64 {
     p[0]
 }
 
-fn search_for(inp: &str, val: u64) -> Option<(u64, u64)> {
+fn search_for(inp: &str, val: i64) -> Option<(i64, i64)> {
     let v = Parser::parse(inp);
-    let len = v.len() as u64;
+    let len = v.len() as i64;
     // We know that the only valid values are those which can be indices into the array, and
     // therefore they must also be smaller than the array size.
     for i in 0..len {

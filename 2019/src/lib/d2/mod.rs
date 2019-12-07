@@ -6,12 +6,12 @@ enum Instruction {
 }
 
 pub struct Program {
-    data: Vec<u64>,
+    data: Vec<i64>,
     off: usize,
 }
 
 impl Program {
-    pub fn new(data: Vec<u64>) -> Self {
+    pub fn new(data: Vec<i64>) -> Self {
         Program { data, off: 0 }
     }
 
@@ -50,21 +50,21 @@ impl Program {
 }
 
 impl Index<usize> for Program {
-    type Output = u64;
+    type Output = i64;
 
-    fn index(&self, idx: usize) -> &u64 {
+    fn index(&self, idx: usize) -> &i64 {
         self.data.index(idx)
     }
 }
 
 impl IndexMut<usize> for Program {
-    fn index_mut(&mut self, idx: usize) -> &mut u64 {
+    fn index_mut(&mut self, idx: usize) -> &mut i64 {
         self.data.index_mut(idx)
     }
 }
 
 impl IntoIterator for Program {
-    type Item = u64;
+    type Item = i64;
     type IntoIter = ::std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -75,9 +75,9 @@ impl IntoIterator for Program {
 pub struct Parser {}
 
 impl Parser {
-    pub fn parse(data: &str) -> Vec<u64> {
+    pub fn parse(data: &str) -> Vec<i64> {
         data.split(",")
-            .map(|s| u64::from_str_radix(s, 10).unwrap())
+            .map(|s| i64::from_str_radix(s, 10).unwrap())
             .collect()
     }
 }
@@ -86,7 +86,7 @@ impl Parser {
 mod tests {
     use super::{Parser, Program};
 
-    fn process(inp: &str) -> Vec<u64> {
+    fn process(inp: &str) -> Vec<i64> {
         let mut p = Program::new(Parser::parse(inp));
         p.run();
         p.into_iter().collect()
