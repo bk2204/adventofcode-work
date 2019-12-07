@@ -13,6 +13,7 @@ fn main() -> io::Result<()> {
     if let Some(inp) = b.lines().next() {
         let inp = &inp?;
         println!("{:?}", program_for(inp, vec![1]));
+        println!("{:?}", program_for(inp, vec![5]));
     }
     Ok(())
 }

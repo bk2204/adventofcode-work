@@ -14,6 +14,10 @@ enum Instruction {
     Mul(Parameter, Parameter, usize),
     Input(usize),
     Output(Parameter),
+    JumpIfTrue(Parameter, Parameter),
+    JumpIfFalse(Parameter, Parameter),
+    LessThan(Parameter, Parameter, usize),
+    Equals(Parameter, Parameter, usize),
 }
 
 pub struct Program {
@@ -60,6 +64,22 @@ impl Program {
                     }
                 }
                 Instruction::Output(a) => v.push(self.load(a)),
+                Instruction::JumpIfTrue(a, b) => {
+                    if self.load(a) != 0 {
+                        self.off = self.load(b) as usize;
+                    }
+                }
+                Instruction::JumpIfFalse(a, b) => {
+                    if self.load(a) == 0 {
+                        self.off = self.load(b) as usize;
+                    }
+                }
+                Instruction::LessThan(a, b, s) => {
+                    self.data[s] = if self.load(a) < self.load(b) { 1 } else { 0 }
+                }
+                Instruction::Equals(a, b, s) => {
+                    self.data[s] = if self.load(a) == self.load(b) { 1 } else { 0 }
+                }
             }
         }
         Ok(v)
@@ -110,8 +130,38 @@ impl Program {
                     self.decode_param(op / 100, self.data[off + 1]),
                 ))
             }
+            5 => {
+                self.off += 3;
+                Some(Instruction::JumpIfTrue(
+                    self.decode_param(op / 100, self.data[off + 1]),
+                    self.decode_param(op / 1000, self.data[off + 2]),
+                ))
+            }
+            6 => {
+                self.off += 3;
+                Some(Instruction::JumpIfFalse(
+                    self.decode_param(op / 100, self.data[off + 1]),
+                    self.decode_param(op / 1000, self.data[off + 2]),
+                ))
+            }
+            7 => {
+                self.off += 4;
+                Some(Instruction::LessThan(
+                    self.decode_param(op / 100, self.data[off + 1]),
+                    self.decode_param(op / 1000, self.data[off + 2]),
+                    self.data[off + 3] as usize,
+                ))
+            }
+            8 => {
+                self.off += 4;
+                Some(Instruction::Equals(
+                    self.decode_param(op / 100, self.data[off + 1]),
+                    self.decode_param(op / 1000, self.data[off + 2]),
+                    self.data[off + 3] as usize,
+                ))
+            }
             99 => None,
-            _ => panic!("invalid opcode"),
+            _ => panic!("invalid opcode {}", op),
         }
     }
 }
@@ -199,5 +249,71 @@ mod tests {
             process("1101,100,-1,4,0"),
             (Parser::parse("1101,100,-1,4,99"), vec![])
         );
+
+        // Compare for equality to 8.
+        assert_eq!(
+            process_with_input("3,9,8,9,10,9,4,9,99,-1,8", "8").1,
+            vec![1]
+        );
+        assert_eq!(
+            process_with_input("3,9,8,9,10,9,4,9,99,-1,8", "7").1,
+            vec![0]
+        );
+        assert_eq!(
+            process_with_input("3,9,8,9,10,9,4,9,99,-1,8", "9").1,
+            vec![0]
+        );
+        assert_eq!(process_with_input("3,3,1108,-1,8,3,4,3,99", "8").1, vec![1]);
+        assert_eq!(process_with_input("3,3,1108,-1,8,3,4,3,99", "7").1, vec![0]);
+        assert_eq!(process_with_input("3,3,1108,-1,8,3,4,3,99", "9").1, vec![0]);
+
+        // Compare for less than 8.
+        assert_eq!(
+            process_with_input("3,9,7,9,10,9,4,9,99,-1,8", "8").1,
+            vec![0]
+        );
+        assert_eq!(
+            process_with_input("3,9,7,9,10,9,4,9,99,-1,8", "7").1,
+            vec![1]
+        );
+        assert_eq!(
+            process_with_input("3,9,7,9,10,9,4,9,99,-1,8", "9").1,
+            vec![0]
+        );
+        assert_eq!(process_with_input("3,3,1107,-1,8,3,4,3,99", "8").1, vec![0]);
+        assert_eq!(process_with_input("3,3,1107,-1,8,3,4,3,99", "7").1, vec![1]);
+        assert_eq!(process_with_input("3,3,1107,-1,8,3,4,3,99", "9").1, vec![0]);
+
+        // Compare for inequality to 0.
+        assert_eq!(
+            process_with_input("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9", "-1").1,
+            vec![1]
+        );
+        assert_eq!(
+            process_with_input("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9", "0").1,
+            vec![0]
+        );
+        assert_eq!(
+            process_with_input("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9", "1").1,
+            vec![1]
+        );
+        assert_eq!(
+            process_with_input("3,3,1105,-1,9,1101,0,0,12,4,12,99,1", "-1").1,
+            vec![1]
+        );
+        assert_eq!(
+            process_with_input("3,3,1105,-1,9,1101,0,0,12,4,12,99,1", "0").1,
+            vec![0]
+        );
+        assert_eq!(
+            process_with_input("3,3,1105,-1,9,1101,0,0,12,4,12,99,1", "1").1,
+            vec![1]
+        );
+
+        // Return 999 if < 8, 1000 if == 8, and 1001 otherwise.
+        let prog = "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99";
+        assert_eq!(process_with_input(prog, "8").1, vec![1000]);
+        assert_eq!(process_with_input(prog, "7").1, vec![999]);
+        assert_eq!(process_with_input(prog, "9").1, vec![1001]);
     }
 }
