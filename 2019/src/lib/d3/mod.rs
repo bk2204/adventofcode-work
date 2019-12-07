@@ -205,7 +205,7 @@ pub struct Parser {}
 
 impl Parser {
     pub fn parse(data: &str) -> Vec<Segment> {
-        data.split(",").map(|s| Self::parse_one(s)).collect()
+        data.split(',').map(|s| Self::parse_one(s)).collect()
     }
 
     fn parse_one(seg: &str) -> Segment {

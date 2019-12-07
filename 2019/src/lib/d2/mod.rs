@@ -193,7 +193,7 @@ pub struct Parser {}
 
 impl Parser {
     pub fn parse(data: &str) -> Vec<i64> {
-        data.split(",")
+        data.split(',')
             .map(|s| i64::from_str_radix(s, 10).unwrap())
             .collect()
     }
