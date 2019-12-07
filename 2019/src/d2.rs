@@ -32,7 +32,7 @@ fn main() -> io::Result<()> {
     if let Some(inp) = b.lines().next() {
         let inp = &inp?;
         println!("{}", program_for(inp, 12, 2));
-        match search_for(inp, 19690720) {
+        match search_for(inp, 19_690_720) {
             Some((noun, verb)) => println!("{}", 100 * noun + verb),
             None => eprintln!("No solution found"),
         }
