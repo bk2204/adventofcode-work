@@ -47,43 +47,73 @@ impl Into<io::Error> for Error {
     }
 }
 
+pub struct Iter<'a> {
+    prog: &'a mut Program,
+    iter: &'a mut dyn Iterator<Item = i64>,
+}
+
+impl<'a> Iter<'a> {
+    fn new(prog: &'a mut Program, iter: &'a mut dyn Iterator<Item = i64>) -> Self {
+        Iter { prog, iter }
+    }
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = Result<i64, Error>;
+
+    fn next(&mut self) -> Option<Result<i64, Error>> {
+        while let Some(op) = self.prog.next() {
+            match op {
+                Instruction::Add(a, b, s) => {
+                    self.prog.data[s] = self.prog.load(a) + self.prog.load(b)
+                }
+                Instruction::Mul(a, b, s) => {
+                    self.prog.data[s] = self.prog.load(a) * self.prog.load(b)
+                }
+                Instruction::Input(s) => {
+                    self.prog.data[s] = match self.iter.next() {
+                        Some(x) => x,
+                        None => return Some(Err(Error::OutOfData)),
+                    }
+                }
+                Instruction::Output(a) => return Some(Ok(self.prog.load(a))),
+                Instruction::JumpIfTrue(a, b) => {
+                    if self.prog.load(a) != 0 {
+                        self.prog.off = self.prog.load(b) as usize;
+                    }
+                }
+                Instruction::JumpIfFalse(a, b) => {
+                    if self.prog.load(a) == 0 {
+                        self.prog.off = self.prog.load(b) as usize;
+                    }
+                }
+                Instruction::LessThan(a, b, s) => {
+                    self.prog.data[s] = if self.prog.load(a) < self.prog.load(b) {
+                        1
+                    } else {
+                        0
+                    }
+                }
+                Instruction::Equals(a, b, s) => {
+                    self.prog.data[s] = if self.prog.load(a) == self.prog.load(b) {
+                        1
+                    } else {
+                        0
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
 impl Program {
     pub fn new(data: Vec<i64>) -> Self {
         Program { data, off: 0 }
     }
 
-    pub fn run(&mut self, iter: &mut dyn Iterator<Item = i64>) -> Result<Vec<i64>, Error> {
-        let mut v = Vec::new();
-        while let Some(op) = self.next() {
-            match op {
-                Instruction::Add(a, b, s) => self.data[s] = self.load(a) + self.load(b),
-                Instruction::Mul(a, b, s) => self.data[s] = self.load(a) * self.load(b),
-                Instruction::Input(s) => {
-                    self.data[s] = match iter.next() {
-                        Some(x) => x,
-                        None => return Err(Error::OutOfData),
-                    }
-                }
-                Instruction::Output(a) => v.push(self.load(a)),
-                Instruction::JumpIfTrue(a, b) => {
-                    if self.load(a) != 0 {
-                        self.off = self.load(b) as usize;
-                    }
-                }
-                Instruction::JumpIfFalse(a, b) => {
-                    if self.load(a) == 0 {
-                        self.off = self.load(b) as usize;
-                    }
-                }
-                Instruction::LessThan(a, b, s) => {
-                    self.data[s] = if self.load(a) < self.load(b) { 1 } else { 0 }
-                }
-                Instruction::Equals(a, b, s) => {
-                    self.data[s] = if self.load(a) == self.load(b) { 1 } else { 0 }
-                }
-            }
-        }
-        Ok(v)
+    pub fn run<'a>(&'a mut self, iter: &'a mut dyn Iterator<Item = i64>) -> Iter<'a> {
+        Iter::new(self, iter)
     }
 
     fn load(&self, p: Parameter) -> i64 {
@@ -202,19 +232,25 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::{Parser, Program};
+    use super::{Error, Parser, Program};
 
     fn process(inp: &str) -> (Vec<i64>, Vec<i64>) {
         let v: Vec<i64> = Vec::new();
         let mut p = Program::new(Parser::parse(inp));
-        let r = p.run(&mut v.into_iter()).unwrap();
+        let r = p
+            .run(&mut v.into_iter())
+            .collect::<Result<Vec<_>, Error>>()
+            .unwrap();
         (p.into_iter().collect(), r)
     }
 
     fn process_with_input(inp: &str, data: &str) -> (Vec<i64>, Vec<i64>) {
         let v = Parser::parse(data);
         let mut p = Program::new(Parser::parse(inp));
-        let r = p.run(&mut v.into_iter()).unwrap();
+        let r = p
+            .run(&mut v.into_iter())
+            .collect::<Result<Vec<_>, Error>>()
+            .unwrap();
         (p.into_iter().collect(), r)
     }
 

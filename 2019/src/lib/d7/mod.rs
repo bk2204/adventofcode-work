@@ -17,7 +17,9 @@ impl<'a> Chain<'a> {
         let mut v = vec![self.initial];
         for (interp, &phase) in interps.iter_mut().zip(phases.iter()) {
             v.insert(0, phase);
-            let r = { interp.run(&mut v.iter().cloned())? };
+            let r = interp
+                .run(&mut v.iter().cloned())
+                .collect::<Result<Vec<_>, d2::Error>>()?;
             v = r;
         }
         Ok(v)

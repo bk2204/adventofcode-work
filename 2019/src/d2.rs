@@ -8,7 +8,7 @@ fn program_for(inp: &str, noun: i64, verb: i64) -> i64 {
     let mut p = Program::new(Parser::parse(&inp));
     p[1] = noun;
     p[2] = verb;
-    p.run(&mut v.into_iter()).unwrap();
+    p.run(&mut v.into_iter());
     p[0]
 }
 
