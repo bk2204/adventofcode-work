@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 pub struct Graph {
     orbits: HashMap<String, String>,
@@ -28,6 +28,35 @@ impl Graph {
         m.insert(s.to_string(), n + 1);
         m[s]
     }
+
+    pub fn common_ancestor(&self, a: &str, b: &str) -> String {
+        let a_path = self.path(a);
+        let b_path = self.path(b);
+        let mut last = "COM";
+        for (ai, bi) in a_path.iter().zip(b_path.iter()) {
+            if ai != bi {
+                return last.to_string();
+            }
+            last = ai;
+        }
+        last.to_string()
+    }
+
+    fn path(&self, obj: &str) -> VecDeque<String> {
+        let mut v = VecDeque::new();
+        let mut this = obj;
+        while let Some(cur) = self.orbits.get(this) {
+            v.push_front(cur.to_string());
+            this = cur;
+        }
+        v
+    }
+
+    pub fn transfers_between(&self, a: &str, b: &str) -> usize {
+        let map = self.traverse();
+        let ancestor = self.common_ancestor(a, b);
+        map[a] + map[b] - 2 * map[&ancestor]
+    }
 }
 
 pub struct Parser {}
@@ -46,12 +75,11 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{Graph, Parser};
-    use std::collections::HashMap;
     use std::io;
     use std::io::BufRead;
 
-    fn traverse() -> HashMap<String, usize> {
-        let data = "COM)B
+    fn data_p1() -> &'static str {
+        "COM)B
 B)C
 C)D
 D)E
@@ -61,18 +89,58 @@ G)H
 D)I
 E)J
 J)K
-K)L";
-        let v = io::Cursor::new(data).lines().map(|r| r.unwrap()).collect::<Vec<_>>();
+K)L"
+    }
+
+    fn data_p2() -> &'static str {
+        "COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L
+K)YOU
+I)SAN"
+    }
+
+    fn graph(data: &str) -> Graph {
+        let v = io::Cursor::new(data)
+            .lines()
+            .map(|r| r.unwrap())
+            .collect::<Vec<_>>();
         let orbits = Parser::parse(&v);
-        Graph::new(orbits).traverse()
+        Graph::new(orbits)
     }
 
     #[test]
     fn validate_p1() {
-        let g = traverse();
+        let g = graph(data_p1()).traverse();
         assert_eq!(g["D"], 3);
         assert_eq!(g["L"], 7);
         assert_eq!(g["COM"], 0);
         assert_eq!(g.iter().map(|(_, v)| *v).sum::<usize>(), 42);
+    }
+
+    #[test]
+    fn common_ancestor() {
+        let g = graph(data_p2());
+        assert_eq!(g.common_ancestor("YOU", "SAN"), "D");
+        assert_eq!(g.common_ancestor("K", "I"), "D");
+        assert_eq!(g.common_ancestor("YOU", "L"), "K");
+        assert_eq!(g.common_ancestor("G", "D"), "B");
+    }
+
+    #[test]
+    fn transfers_between() {
+        let g = graph(data_p2());
+        assert_eq!(g.transfers_between("YOU", "SAN"), 6);
+        assert_eq!(g.transfers_between("K", "I"), 4);
+        assert_eq!(g.transfers_between("YOU", "L"), 2);
+        assert_eq!(g.transfers_between("G", "D"), 3);
     }
 }
