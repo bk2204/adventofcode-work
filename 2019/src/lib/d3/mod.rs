@@ -127,7 +127,7 @@ impl Graph {
         });
     }
 
-    fn each_point<F: FnMut(Point, usize, usize)>(paths: &Vec<Vec<Segment>>, mut f: F) {
+    fn each_point<F: FnMut(Point, usize, usize)>(paths: &[Vec<Segment>], mut f: F) {
         for (i, path) in paths.iter().enumerate() {
             let mut cur = Point(0, 0);
             let mut steps = 0;

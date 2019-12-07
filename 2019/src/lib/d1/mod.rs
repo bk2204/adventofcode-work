@@ -21,7 +21,7 @@ pub fn parse_file(f: Box<dyn io::BufRead>) -> Vec<u64> {
         .collect()
 }
 
-pub fn total_fuel(v: &Vec<u64>, op: &dyn Fn(u64) -> u64) -> u64 {
+pub fn total_fuel(v: &[u64], op: &dyn Fn(u64) -> u64) -> u64 {
     v.iter().map(|mass| op(*mass)).sum()
 }
 
