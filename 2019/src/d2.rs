@@ -4,10 +4,11 @@ use std::io;
 use std::io::BufRead;
 
 fn program_for(inp: &str, noun: i64, verb: i64) -> i64 {
+    let v: Vec<i64> = Vec::new();
     let mut p = Program::new(Parser::parse(&inp));
     p[1] = noun;
     p[2] = verb;
-    p.run();
+    p.run(Box::new(v.into_iter())).unwrap();
     p[0]
 }
 
