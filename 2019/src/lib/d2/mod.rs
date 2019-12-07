@@ -51,7 +51,7 @@ impl Program {
         Program { data, off: 0 }
     }
 
-    pub fn run(&mut self, mut iter: Box<dyn Iterator<Item = i64>>) -> Result<Vec<i64>, Error> {
+    pub fn run(&mut self, iter: &mut dyn Iterator<Item = i64>) -> Result<Vec<i64>, Error> {
         let mut v = Vec::new();
         while let Some(op) = self.next() {
             match op {
@@ -206,14 +206,14 @@ mod tests {
     fn process(inp: &str) -> (Vec<i64>, Vec<i64>) {
         let v: Vec<i64> = Vec::new();
         let mut p = Program::new(Parser::parse(inp));
-        let r = p.run(Box::new(v.into_iter())).unwrap();
+        let r = p.run(&mut v.into_iter()).unwrap();
         (p.into_iter().collect(), r)
     }
 
     fn process_with_input(inp: &str, data: &str) -> (Vec<i64>, Vec<i64>) {
         let v = Parser::parse(data);
         let mut p = Program::new(Parser::parse(inp));
-        let r = p.run(Box::new(v.into_iter())).unwrap();
+        let r = p.run(&mut v.into_iter()).unwrap();
         (p.into_iter().collect(), r)
     }
 

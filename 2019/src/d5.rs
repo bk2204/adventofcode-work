@@ -5,7 +5,7 @@ use std::io::BufRead;
 
 fn program_for(inp: &str, v: Vec<i64>) -> Vec<i64> {
     let mut p = Program::new(Parser::parse(&inp));
-    p.run(Box::new(v.into_iter())).unwrap()
+    p.run(&mut v.into_iter()).unwrap()
 }
 
 fn main() -> io::Result<()> {
