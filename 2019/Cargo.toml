@@ -32,9 +32,14 @@ path = "src/d6.rs"
 name = "d7"
 path = "src/d7.rs"
 
+[[bin]]
+name = "d8"
+path = "src/d8.rs"
+
 [lib]
 name = "adventofcode"
 path = "src/lib/mod.rs"
 
 [dependencies]
+itertools = "0.8"
 permutator = "0.1"
