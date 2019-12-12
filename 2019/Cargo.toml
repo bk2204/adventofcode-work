@@ -36,6 +36,10 @@ path = "src/d7.rs"
 name = "d8"
 path = "src/d8.rs"
 
+[[bin]]
+name = "d9"
+path = "src/d9.rs"
+
 [lib]
 name = "adventofcode"
 path = "src/lib/mod.rs"

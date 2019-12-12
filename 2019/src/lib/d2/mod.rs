@@ -3,27 +3,30 @@ use std::fmt;
 use std::io;
 use std::ops::{Index, IndexMut};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum Parameter {
     Position(usize),
     Immediate(i64),
 }
 
+#[derive(Debug)]
 enum Instruction {
-    Add(Parameter, Parameter, usize),
-    Mul(Parameter, Parameter, usize),
-    Input(usize),
+    Add(Parameter, Parameter, Parameter),
+    Mul(Parameter, Parameter, Parameter),
+    Input(Parameter),
     Output(Parameter),
     JumpIfTrue(Parameter, Parameter),
     JumpIfFalse(Parameter, Parameter),
-    LessThan(Parameter, Parameter, usize),
-    Equals(Parameter, Parameter, usize),
+    LessThan(Parameter, Parameter, Parameter),
+    Equals(Parameter, Parameter, Parameter),
+    AdjustRelative(Parameter),
 }
 
 #[derive(Clone)]
 pub struct Program {
     data: Vec<i64>,
     off: usize,
+    base: isize,
 }
 
 #[derive(Debug)]
@@ -65,17 +68,18 @@ impl<'a> Iterator for Iter<'a> {
         while let Some(op) = self.prog.next() {
             match op {
                 Instruction::Add(a, b, s) => {
-                    self.prog.data[s] = self.prog.load(a) + self.prog.load(b)
+                    self.prog.store(s, self.prog.load(a) + self.prog.load(b))
                 }
                 Instruction::Mul(a, b, s) => {
-                    self.prog.data[s] = self.prog.load(a) * self.prog.load(b)
+                    self.prog.store(s, self.prog.load(a) * self.prog.load(b))
                 }
-                Instruction::Input(s) => {
-                    self.prog.data[s] = match self.iter.next() {
+                Instruction::Input(s) => self.prog.store(
+                    s,
+                    match self.iter.next() {
                         Some(x) => x,
                         None => return Some(Err(Error::OutOfData)),
-                    }
-                }
+                    },
+                ),
                 Instruction::Output(a) => return Some(Ok(self.prog.load(a))),
                 Instruction::JumpIfTrue(a, b) => {
                     if self.prog.load(a) != 0 {
@@ -87,19 +91,24 @@ impl<'a> Iterator for Iter<'a> {
                         self.prog.off = self.prog.load(b) as usize;
                     }
                 }
-                Instruction::LessThan(a, b, s) => {
-                    self.prog.data[s] = if self.prog.load(a) < self.prog.load(b) {
+                Instruction::LessThan(a, b, s) => self.prog.store(
+                    s,
+                    if self.prog.load(a) < self.prog.load(b) {
                         1
                     } else {
                         0
-                    }
-                }
-                Instruction::Equals(a, b, s) => {
-                    self.prog.data[s] = if self.prog.load(a) == self.prog.load(b) {
+                    },
+                ),
+                Instruction::Equals(a, b, s) => self.prog.store(
+                    s,
+                    if self.prog.load(a) == self.prog.load(b) {
                         1
                     } else {
                         0
-                    }
+                    },
+                ),
+                Instruction::AdjustRelative(a) => {
+                    self.prog.base += self.prog.load(a) as isize;
                 }
             }
         }
@@ -109,7 +118,11 @@ impl<'a> Iterator for Iter<'a> {
 
 impl Program {
     pub fn new(data: Vec<i64>) -> Self {
-        Program { data, off: 0 }
+        Program {
+            data,
+            off: 0,
+            base: 0,
+        }
     }
 
     pub fn run<'a>(&'a mut self, iter: &'a mut dyn Iterator<Item = i64>) -> Iter<'a> {
@@ -118,16 +131,40 @@ impl Program {
 
     fn load(&self, p: Parameter) -> i64 {
         match p {
-            Parameter::Position(x) => self.data[x],
+            Parameter::Position(x) => {
+                if x < self.data.len() {
+                    self.data[x]
+                } else {
+                    0
+                }
+            }
             Parameter::Immediate(x) => x,
         }
     }
 
-    fn decode_param(&self, mode: i64, val: i64) -> Parameter {
+    fn store(&mut self, p: Parameter, val: i64) {
+        let idx = match p {
+            Parameter::Position(x) => x,
+            Parameter::Immediate(_) => return,
+        };
+        if idx >= self.data.len() {
+            self.data.resize_with(idx + 1, Default::default);
+        }
+        self.data[idx] = val;
+    }
+
+    fn decode_param(&self, mode: i64, off: usize) -> Parameter {
+        let val = self.load(Parameter::Position(off));
+        self.decode_value(mode, val)
+    }
+
+    fn decode_value(&self, mode: i64, val: i64) -> Parameter {
         if mode % 10 == 0 {
             Parameter::Position(val as usize)
-        } else {
+        } else if mode % 10 == 1 {
             Parameter::Immediate(val)
+        } else {
+            Parameter::Position((val as isize + self.base) as usize)
         }
     }
 
@@ -138,57 +175,61 @@ impl Program {
             1 => {
                 self.off += 4;
                 Some(Instruction::Add(
-                    self.decode_param(op / 100, self.data[off + 1]),
-                    self.decode_param(op / 1000, self.data[off + 2]),
-                    self.data[off + 3] as usize,
+                    self.decode_param(op / 100, off + 1),
+                    self.decode_param(op / 1000, off + 2),
+                    self.decode_param(op / 10000, off + 3),
                 ))
             }
             2 => {
                 self.off += 4;
                 Some(Instruction::Mul(
-                    self.decode_param(op / 100, self.data[off + 1]),
-                    self.decode_param(op / 1000, self.data[off + 2]),
-                    self.data[off + 3] as usize,
+                    self.decode_param(op / 100, off + 1),
+                    self.decode_param(op / 1000, off + 2),
+                    self.decode_param(op / 10000, off + 3),
                 ))
             }
             3 => {
                 self.off += 2;
-                Some(Instruction::Input(self.data[off + 1] as usize))
+                Some(Instruction::Input(self.decode_param(op / 100, off + 1)))
             }
             4 => {
                 self.off += 2;
-                Some(Instruction::Output(
-                    self.decode_param(op / 100, self.data[off + 1]),
-                ))
+                Some(Instruction::Output(self.decode_param(op / 100, off + 1)))
             }
             5 => {
                 self.off += 3;
                 Some(Instruction::JumpIfTrue(
-                    self.decode_param(op / 100, self.data[off + 1]),
-                    self.decode_param(op / 1000, self.data[off + 2]),
+                    self.decode_param(op / 100, off + 1),
+                    self.decode_param(op / 1000, off + 2),
                 ))
             }
             6 => {
                 self.off += 3;
                 Some(Instruction::JumpIfFalse(
-                    self.decode_param(op / 100, self.data[off + 1]),
-                    self.decode_param(op / 1000, self.data[off + 2]),
+                    self.decode_param(op / 100, off + 1),
+                    self.decode_param(op / 1000, off + 2),
                 ))
             }
             7 => {
                 self.off += 4;
                 Some(Instruction::LessThan(
-                    self.decode_param(op / 100, self.data[off + 1]),
-                    self.decode_param(op / 1000, self.data[off + 2]),
-                    self.data[off + 3] as usize,
+                    self.decode_param(op / 100, off + 1),
+                    self.decode_param(op / 1000, off + 2),
+                    self.decode_param(op / 10000, off + 3),
                 ))
             }
             8 => {
                 self.off += 4;
                 Some(Instruction::Equals(
-                    self.decode_param(op / 100, self.data[off + 1]),
-                    self.decode_param(op / 1000, self.data[off + 2]),
-                    self.data[off + 3] as usize,
+                    self.decode_param(op / 100, off + 1),
+                    self.decode_param(op / 1000, off + 2),
+                    self.decode_param(op / 10000, off + 3),
+                ))
+            }
+            9 => {
+                self.off += 2;
+                Some(Instruction::AdjustRelative(
+                    self.decode_param(op / 100, off + 1),
                 ))
             }
             99 => None,
@@ -352,5 +393,21 @@ mod tests {
         assert_eq!(process_with_input(prog, "8").1, vec![1000]);
         assert_eq!(process_with_input(prog, "7").1, vec![999]);
         assert_eq!(process_with_input(prog, "9").1, vec![1001]);
+
+        // Quine.
+        let quine = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
+        assert_eq!(process(quine).1, Parser::parse(quine));
+
+        // 64-bit number support.
+        assert_eq!(
+            process("1102,34915192,34915192,7,4,7,99,0").1,
+            vec![1219070632396864]
+        );
+        assert_eq!(process("104,1125899906842624,99").1, vec![1125899906842624]);
+
+        assert_eq!(
+            process_with_input("109,1,203,999,101,1,1000,25,4,25,99", "2").1,
+            vec![3]
+        );
     }
 }
