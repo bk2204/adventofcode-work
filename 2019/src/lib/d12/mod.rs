@@ -86,6 +86,57 @@ impl Universe {
     pub fn moons(&self) -> Vec<Moon> {
         self.moons.clone()
     }
+
+    pub fn period(&mut self) -> usize {
+        let moons = self.moons.clone();
+        let (mut x, mut y, mut z): (Option<usize>, Option<usize>, Option<usize>) =
+            (None, None, None);
+        let mut count = 0;
+        while x.is_none() || y.is_none() || z.is_none() {
+            count += 1;
+            self.step();
+            if x.is_none()
+                && self
+                    .moons
+                    .iter()
+                    .zip(moons.iter())
+                    .all(|(now, start)| now.velocity.0 == 0 && now.point.0 == start.point.0)
+            {
+                x = Some(count);
+            }
+            if y.is_none()
+                && self
+                    .moons
+                    .iter()
+                    .zip(moons.iter())
+                    .all(|(now, start)| now.velocity.1 == 0 && now.point.1 == start.point.1)
+            {
+                y = Some(count);
+            }
+            if z.is_none()
+                && self
+                    .moons
+                    .iter()
+                    .zip(moons.iter())
+                    .all(|(now, start)| now.velocity.2 == 0 && now.point.2 == start.point.2)
+            {
+                z = Some(count);
+            }
+        }
+        Self::lcm(Self::lcm(x.unwrap(), y.unwrap()), z.unwrap())
+    }
+
+    fn lcm(x: usize, y: usize) -> usize {
+        (x * y) / Self::gcd(x, y)
+    }
+
+    fn gcd(x: usize, y: usize) -> usize {
+        match x.cmp(&y) {
+            Ordering::Equal => x,
+            Ordering::Greater => Self::gcd(x - y, y),
+            Ordering::Less => Self::gcd(x, y - x),
+        }
+    }
 }
 
 pub struct Parser {}
@@ -192,5 +243,26 @@ mod tests {
             u.moons().iter().map(|m| m.total_energy()).sum::<usize>(),
             179
         );
+    }
+
+    #[test]
+    fn period() {
+        let inp = "
+<x=-1, y=0, z=2>
+<x=2, y=-10, z=-7>
+<x=4, y=-8, z=8>
+<x=3, y=5, z=-1>
+";
+        let mut u = universe(inp.trim());
+        assert_eq!(u.period(), 2772);
+
+        let inp = "
+<x=-8, y=-10, z=0>
+<x=5, y=5, z=10>
+<x=2, y=-7, z=3>
+<x=9, y=-8, z=-3>
+";
+        let mut u = universe(inp.trim());
+        assert_eq!(u.period(), 4686774924);
     }
 }
