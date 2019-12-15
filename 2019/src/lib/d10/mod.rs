@@ -1,5 +1,36 @@
-use std::collections::{HashMap, HashSet};
+use itertools::Itertools;
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+
+#[derive(Debug)]
+struct ComparableFloat(f64);
+
+impl PartialEq for ComparableFloat {
+    fn eq(&self, other: &Self) -> bool {
+        (self.0 - other.0).abs() < 0.000_000_1
+    }
+}
+
+impl Eq for ComparableFloat {}
+
+impl Ord for ComparableFloat {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.eq(other) {
+            Ordering::Equal
+        } else if self.0 < other.0 {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
+    }
+}
+
+impl PartialOrd for ComparableFloat {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Point(pub usize, pub usize);
@@ -18,6 +49,27 @@ impl Point {
             },
         }
     }
+
+    fn polar_to(&self, other: &Point) -> PolarCoordinates {
+        let pi = 4.0 * 1.0f64.atan();
+        let dx = other.0 as isize - self.0 as isize;
+        let dy = self.1 as isize - other.1 as isize;
+        let dsq = (dx * dx + dy * dy) as usize;
+        let val = (dy as f64 / dx as f64).atan();
+        let theta = match (dy.signum(), dx.signum()) {
+            (0, 1) => 0.0,
+            (0, 0) => unreachable!(),
+            (0, -1) => pi,
+            (1, 1) => val,
+            (1, 0) => pi / 2.0,
+            (1, -1) => val + pi,
+            (-1, 1) => val + 2.0 * pi,
+            (-1, 0) => 3.0 * pi / 2.0,
+            (-1, -1) => val + pi,
+            _ => unreachable!(),
+        };
+        PolarCoordinates { dsq, theta }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -34,7 +86,8 @@ impl PartialEq for Line {
             (Some(_), None) => false,
             (None, Some(_)) => false,
             (None, None) => {
-                (self.m - other.m).abs() < 0.000_000_1 && (self.b - other.b).abs() < 0.000_000_1
+                ComparableFloat(self.m) == ComparableFloat(other.m)
+                    && ComparableFloat(self.b) == ComparableFloat(other.b)
             }
         }
     }
@@ -52,6 +105,51 @@ impl Hash for Line {
                 self.b.to_bits().hash(state);
             }
         }
+    }
+}
+
+// This is a slightly modified version of polar coordinates in that we use the
+// distance squared instead of the distance.  This simplifies things since floats
+// are not comparable but integers are.
+#[derive(Copy, Clone, Debug)]
+struct PolarCoordinates {
+    dsq: usize,
+    theta: f64,
+}
+
+impl PolarCoordinates {
+    // We adjust theta for sorting such that the value will end up always positive and increasing
+    // in the clockwise direction, starting at pi/2 (pointing directly up).
+    fn adjusted_theta(&self) -> f64 {
+        let pi = 4.0 * 1.0f64.atan();
+        let circ = 2.0 * pi;
+        (circ - (self.theta - (pi / 2.0))) % circ
+    }
+}
+
+impl PartialEq for PolarCoordinates {
+    fn eq(&self, other: &Self) -> bool {
+        if self.dsq != other.dsq {
+            return false;
+        }
+        ComparableFloat(self.theta) == ComparableFloat(other.theta)
+    }
+}
+
+impl Eq for PolarCoordinates {}
+
+impl Ord for PolarCoordinates {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match ComparableFloat(self.adjusted_theta()).cmp(&ComparableFloat(other.adjusted_theta())) {
+            Ordering::Equal => self.dsq.cmp(&other.dsq),
+            x => x,
+        }
+    }
+}
+
+impl PartialOrd for PolarCoordinates {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -97,11 +195,54 @@ impl Map {
             })
             .collect()
     }
+
+    pub fn destroyed_from(&self, point: &Point) -> Vec<Point> {
+        // We partition the items into groups based on their direction (line, comparison) from the
+        // point and then iterate over them in polar coordinate order one at a time.
+        let v: Vec<_> = self
+            .points
+            .iter()
+            .filter(|q| *q != point)
+            .map(|q| ((point.line(q), point.cmp(q)), point.polar_to(q), *q))
+            .collect();
+
+        let mut thetagrouped: BTreeMap<_, Vec<(PolarCoordinates, Point)>> = BTreeMap::new();
+        for (_, polar, point) in &v {
+            let atheta = ComparableFloat(polar.adjusted_theta());
+            if let Some(v) = thetagrouped.get_mut(&atheta) {
+                v.push((*polar, *point));
+            } else {
+                thetagrouped.insert(atheta, vec![(*polar, *point)]);
+            }
+        }
+        for v in thetagrouped.values_mut() {
+            v.sort();
+        }
+        let mut seen = HashSet::new();
+        let mut r = Vec::new();
+
+        // This isn't especially efficient, but n is small.
+        while r.len() < v.len() {
+            for seq in thetagrouped.values() {
+                if let Some(point) = seq
+                    .iter()
+                    .sorted()
+                    .map(|(_, p)| p)
+                    .filter(|p| !seen.contains(p))
+                    .nth(0)
+                {
+                    seen.insert(point);
+                    r.push(*point);
+                }
+            }
+        }
+        r
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Line, Map, Point};
+    use super::{ComparableFloat, Line, Map, Point, PolarCoordinates};
     use std::f64::INFINITY;
     use std::io;
     use std::io::BufRead;
@@ -121,6 +262,10 @@ mod tests {
                     (p, pcount)
                 }
             })
+    }
+
+    fn destroyed_from(s: &str, p: Point) -> Vec<Point> {
+        map(s).destroyed_from(&p)
     }
 
     #[test]
@@ -157,6 +302,42 @@ mod tests {
                 b: INFINITY,
                 x: Some(1)
             }
+        );
+    }
+
+    #[test]
+    fn polar() {
+        let pi = 4.0 * 1.0f64.atan();
+
+        assert_eq!(
+            ComparableFloat(
+                PolarCoordinates {
+                    dsq: 1,
+                    theta: 3.0 * pi / 2.0
+                }
+                .adjusted_theta()
+            ),
+            ComparableFloat(pi)
+        );
+
+        assert_eq!(
+            ComparableFloat(Point(0, 0).polar_to(&Point(0, 1)).theta),
+            ComparableFloat(3.0 * pi / 2.0)
+        );
+
+        assert_eq!(
+            ComparableFloat(Point(0, 1).polar_to(&Point(0, 0)).theta),
+            ComparableFloat(pi / 2.0)
+        );
+
+        assert_eq!(
+            ComparableFloat(Point(0, 0).polar_to(&Point(1, 0)).theta),
+            ComparableFloat(0.0)
+        );
+
+        assert_eq!(
+            ComparableFloat(Point(1, 0).polar_to(&Point(0, 0)).theta),
+            ComparableFloat(pi)
         );
     }
 
@@ -227,5 +408,18 @@ mod tests {
 ###.##.####.##.#..##
 ";
         assert_eq!(best_point(map), (Point(11, 13), 210));
+        let destroyed = destroyed_from(map, Point(11, 13));
+        assert_eq!(destroyed.len(), 299);
+        assert_eq!(destroyed[0], Point(11, 12));
+        assert_eq!(destroyed[1], Point(12, 1));
+        assert_eq!(destroyed[2], Point(12, 2));
+        assert_eq!(destroyed[9], Point(12, 8));
+        assert_eq!(destroyed[19], Point(16, 0));
+        assert_eq!(destroyed[49], Point(16, 9));
+        assert_eq!(destroyed[99], Point(10, 16));
+        assert_eq!(destroyed[198], Point(9, 6));
+        assert_eq!(destroyed[199], Point(8, 2));
+        assert_eq!(destroyed[200], Point(10, 9));
+        assert_eq!(destroyed[298], Point(11, 1));
     }
 }

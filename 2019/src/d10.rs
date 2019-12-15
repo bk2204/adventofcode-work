@@ -15,9 +15,15 @@ fn best_point(map: &Map) -> (Point, usize) {
         })
 }
 
+fn destroyed_from(map: &Map, point: &Point) -> Vec<Point> {
+    map.destroyed_from(point)
+}
+
 fn main() -> io::Result<()> {
     let b = io::BufReader::new(io::stdin());
     let map = Map::new(b.lines().map(|r| r.unwrap()));
-    println!("{:?}", best_point(&map));
+    let (point, sz) = best_point(&map);
+    println!("{:?}", (point, sz));
+    println!("{:?}", destroyed_from(&map, &point)[199]);
     Ok(())
 }
