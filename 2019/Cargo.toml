@@ -44,6 +44,10 @@ path = "src/d9.rs"
 name = "d10"
 path = "src/d10.rs"
 
+[[bin]]
+name = "d12"
+path = "src/d12.rs"
+
 [lib]
 name = "adventofcode"
 path = "src/lib/mod.rs"
@@ -51,3 +55,4 @@ path = "src/lib/mod.rs"
 [dependencies]
 itertools = "0.8"
 permutator = "0.1"
+text_io = "0.1"
