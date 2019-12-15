@@ -1,7 +1,9 @@
+use std::cell::RefCell;
 use std::error;
 use std::fmt;
 use std::io;
 use std::ops::{Index, IndexMut};
+use std::rc::Rc;
 
 #[derive(Copy, Clone, Debug)]
 enum Parameter {
@@ -52,11 +54,11 @@ impl Into<io::Error> for Error {
 
 pub struct Iter<'a> {
     prog: &'a mut Program,
-    iter: &'a mut dyn Iterator<Item = i64>,
+    iter: Rc<RefCell<dyn Iterator<Item = i64>>>,
 }
 
 impl<'a> Iter<'a> {
-    fn new(prog: &'a mut Program, iter: &'a mut dyn Iterator<Item = i64>) -> Self {
+    fn new(prog: &'a mut Program, iter: Rc<RefCell<dyn Iterator<Item = i64>>>) -> Self {
         Iter { prog, iter }
     }
 }
@@ -73,13 +75,16 @@ impl<'a> Iterator for Iter<'a> {
                 Instruction::Mul(a, b, s) => {
                     self.prog.store(s, self.prog.load(a) * self.prog.load(b))
                 }
-                Instruction::Input(s) => self.prog.store(
-                    s,
-                    match self.iter.next() {
-                        Some(x) => x,
-                        None => return Some(Err(Error::OutOfData)),
-                    },
-                ),
+                Instruction::Input(s) => {
+                    let mut iter = self.iter.borrow_mut();
+                    self.prog.store(
+                        s,
+                        match iter.next() {
+                            Some(x) => x,
+                            None => return Some(Err(Error::OutOfData)),
+                        },
+                    );
+                }
                 Instruction::Output(a) => return Some(Ok(self.prog.load(a))),
                 Instruction::JumpIfTrue(a, b) => {
                     if self.prog.load(a) != 0 {
@@ -125,7 +130,7 @@ impl Program {
         }
     }
 
-    pub fn run<'a>(&'a mut self, iter: &'a mut dyn Iterator<Item = i64>) -> Iter<'a> {
+    pub fn run<'a>(&'a mut self, iter: Rc<RefCell<dyn Iterator<Item = i64>>>) -> Iter<'a> {
         Iter::new(self, iter)
     }
 
@@ -274,12 +279,14 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{Error, Parser, Program};
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     fn process(inp: &str) -> (Vec<i64>, Vec<i64>) {
         let v: Vec<i64> = Vec::new();
         let mut p = Program::new(Parser::parse(inp));
         let r = p
-            .run(&mut v.into_iter())
+            .run(Rc::new(RefCell::new(v.into_iter())))
             .collect::<Result<Vec<_>, Error>>()
             .unwrap();
         (p.into_iter().collect(), r)
@@ -289,7 +296,7 @@ mod tests {
         let v = Parser::parse(data);
         let mut p = Program::new(Parser::parse(inp));
         let r = p
-            .run(&mut v.into_iter())
+            .run(Rc::new(RefCell::new(v.into_iter())))
             .collect::<Result<Vec<_>, Error>>()
             .unwrap();
         (p.into_iter().collect(), r)

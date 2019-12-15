@@ -162,7 +162,7 @@ impl Graph {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum Direction {
+pub enum Direction {
     North,
     South,
     East,

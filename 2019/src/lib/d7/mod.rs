@@ -1,5 +1,7 @@
 use crate::d2;
 use permutator::Permutation;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Chain<'a> {
     prog: &'a str,
@@ -14,15 +16,15 @@ impl<'a> Chain<'a> {
     pub fn run(&self, phases: Vec<i64>) -> Result<Vec<i64>, d2::Error> {
         let code = d2::Parser::parse(self.prog);
         let mut interps = vec![d2::Program::new(code); phases.len()];
-        let mut v = vec![self.initial];
+        let mut v = Box::new(vec![self.initial]);
         for (interp, &phase) in interps.iter_mut().zip(phases.iter()) {
             v.insert(0, phase);
             let r = interp
-                .run(&mut v.iter().cloned())
+                .run(Rc::new(RefCell::new(v.into_iter())))
                 .collect::<Result<Vec<_>, d2::Error>>()?;
-            v = r;
+            v = Box::new(r);
         }
-        Ok(v)
+        Ok(*v)
     }
 
     pub fn run_with_feedback(&self, phases: Vec<i64>) -> Result<Vec<i64>, d2::Error> {
@@ -30,17 +32,17 @@ impl<'a> Chain<'a> {
         loop {
             let code = d2::Parser::parse(self.prog);
             let mut interps = vec![d2::Program::new(code); phases.len()];
-            let mut v = inp.clone();
+            let mut v = Box::new(inp.clone());
             for (interp, &phase) in interps.iter_mut().zip(phases.iter()) {
                 v.insert(0, phase);
                 let r = interp
-                    .run(&mut v.iter().cloned())
+                    .run(Rc::new(RefCell::new(v.into_iter())))
                     .filter(|r| r.is_ok())
                     .collect::<Result<Vec<_>, d2::Error>>()?;
-                v = r;
+                v = Box::new(r);
             }
             if v.len() + 1 == inp.len() {
-                return Ok(v);
+                return Ok(*v);
             }
             inp.push(v[inp.len() - 1]);
         }

@@ -1,11 +1,13 @@
 extern crate adventofcode;
 use adventofcode::d2::{Error, Parser, Program};
+use std::cell::RefCell;
 use std::io;
 use std::io::BufRead;
+use std::rc::Rc;
 
 fn program_for(inp: &str, v: Vec<i64>) -> Vec<i64> {
     let mut p = Program::new(Parser::parse(&inp));
-    p.run(&mut v.into_iter())
+    p.run(Rc::new(RefCell::new(v.into_iter())))
         .collect::<Result<Vec<_>, Error>>()
         .unwrap()
 }
